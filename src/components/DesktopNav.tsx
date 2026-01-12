@@ -18,6 +18,7 @@ export function DesktopNav() {
   if (host.includes('aurelio')) brandName = 'Aurélio Seguros';
   else if (host.includes('povoaseg') || host.includes('povoa')) brandName = 'Póvoa Seguros';
   else if (host.includes('lisboaseg') || host.includes('lisboa')) brandName = 'Lisboa Seguros';
+  else if (host.includes('portoseg') || host.includes('porto')) brandName = 'Porto Seguros';
 
   // Close profile menu on outside click or Escape
   useEffect(() => {

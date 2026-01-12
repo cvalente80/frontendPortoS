@@ -83,6 +83,11 @@ export default function Seo({ title, description, image, canonicalPath, noIndex,
       cityDesc = 'Lisboa';
       addressLocality = 'Lisboa';
       addressRegion = 'Lisboa';
+    } else if (host.includes('portoseg') || host.includes('porto')) {
+      brandName = 'Porto Seguros';
+      cityDesc = 'Porto';
+      addressLocality = 'Porto';
+      addressRegion = 'Porto';
     }
 
     const base = siteBase();

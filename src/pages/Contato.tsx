@@ -36,11 +36,14 @@ export default function Contato() {
   const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
   const isPovoa = host.includes('povoaseg') || host.includes('povoa');
   const isLisboa = host.includes('lisboaseg') || host.includes('lisboa');
+  const isPorto = host.includes('portoseg') || host.includes('porto');
   const mapQuery = isLisboa
     ? 'Lisboa, Portugal'
     : isPovoa
       ? 'Póvoa de Santa Iria, Portugal'
-      : 'Ansião, Leiria, Portugal';
+      : isPorto
+        ? 'Porto, Portugal'
+        : 'Ansião, Leiria, Portugal';
   const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&hl=${base === 'en' ? 'en' : 'pt-PT'}&z=13&output=embed`;
   const mapLink = `https://maps.google.com/?q=${encodeURIComponent(mapQuery)}`;
   const [form, setForm] = useState<FormState>({
