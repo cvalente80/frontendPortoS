@@ -17,4 +17,7 @@ fi
 # Remove trailing slash from SITE_URL to avoid double slashes
 SITE_URL="${SITE_URL%/}"
 
-sed -i "s|__SITE_URL__|$SITE_URL|g" "$SITEMAP_FILE"
+# Use a portable approach instead of sed -i (BSD/macOS vs GNU differences)
+tmp_file="${SITEMAP_FILE}.tmp"
+sed "s|__SITE_URL__|$SITE_URL|g" "$SITEMAP_FILE" > "$tmp_file"
+mv "$tmp_file" "$SITEMAP_FILE"
