@@ -20,6 +20,7 @@
   <url><loc>__SITE_URL__/pt/simulacao-habitacao</loc></url>
   <url><loc>__SITE_URL__/pt/simulacao-rc-profissional</loc></url>
   <url><loc>__SITE_URL__/pt/simulacao-condominio</loc></url>
+  <url><loc>__SITE_URL__/pt/noticias</loc></url>
 
   <!-- English (paths mirror Portuguese slugs) -->
   <url><loc>__SITE_URL__/en</loc></url>
@@ -41,4 +42,5 @@
   <url><loc>__SITE_URL__/en/simulacao-habitacao</loc></url>
   <url><loc>__SITE_URL__/en/simulacao-rc-profissional</loc></url>
   <url><loc>__SITE_URL__/en/simulacao-condominio</loc></url>
+  <url><loc>__SITE_URL__/en/noticias</loc></url>
 </urlset>

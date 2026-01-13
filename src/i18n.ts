@@ -21,6 +21,7 @@ const resources = {
         businessFleet: 'Frota (informação/produto)',
         businessWork: 'Acidentes de Trabalho (produto)',
         products: 'Produtos',
+        news: 'Notícias',
         contact: 'Contacto',
         mySimulations: 'Simulações',
         myPolicies: 'Apólices'
@@ -1083,6 +1084,7 @@ const resources = {
         businessFleet: 'Fleet (info)',
         businessWork: 'Workers’ Compensation (info)',
         products: 'Products',
+        news: 'News',
         contact: 'Contact',
         mySimulations: 'My quotes',
         myPolicies: 'My policies'
