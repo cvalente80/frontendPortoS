@@ -24,6 +24,26 @@ function env(name, fallback = '') {
   return process.env[name] || fallback;
 }
 
+const ALLOWED_TAGS = [
+  'auto',
+  'vida',
+  'saude',
+  'habitacao',
+  'empresas',
+  'rc-profissional',
+  'condominio',
+  'multirriscos-empresarial',
+  'frota',
+  'acidentes-trabalho',
+  'fiscalidade',
+  'sinistros',
+  'economia',
+  'ambiente',
+  'infraestruturas',
+  'local',
+  'nacional'
+];
+
 async function main() {
   const [,, title, url, source, regionArg] = process.argv;
   if (!title || !url || !source) {
@@ -36,8 +56,16 @@ async function main() {
   const openaiModel = env('OPENAI_MODEL', 'gpt-4o-mini');
 
   let summary = '';
+  let tags = [];
   if (openaiKey) {
-    const prompt = `Redige um resumo curto (2-3 frases, em português de Portugal) para esta notícia, de forma neutra e informativa, sem copiar texto literal. Título: "${title}". URL: ${url}.`;
+    const prompt = `Tens de responder apenas em JSON.
+Campos obrigatórios:
+- summary: resumo curto (3-4 frases, português de Portugal, neutro, sem copiar texto literal).
+- tags: array com 2-4 etiquetas em minúsculas, escolhidas de entre esta lista: ${ALLOWED_TAGS.join(', ')}.
+
+Notícia:
+Título: "${title}"
+URL: ${url}`;
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -47,10 +75,10 @@ async function main() {
       body: JSON.stringify({
         model: openaiModel,
         messages: [
-          { role: 'system', content: 'Escreves sempre em português de Portugal.' },
+          { role: 'system', content: 'Escreves sempre em português de Portugal e respondes apenas com JSON válido.' },
           { role: 'user', content: prompt },
         ],
-        temperature: 0.4,
+        temperature: 0.3,
       }),
     });
     if (!resp.ok) {
@@ -62,7 +90,22 @@ async function main() {
     const content = firstChoice && firstChoice.message && typeof firstChoice.message.content === 'string'
       ? firstChoice.message.content
       : '';
-    summary = content.trim();
+
+    try {
+      const parsed = JSON.parse(content);
+      if (parsed && typeof parsed.summary === 'string') {
+        summary = parsed.summary.trim();
+      }
+      if (Array.isArray(parsed.tags)) {
+        tags = parsed.tags
+          .map((t) => String(t).toLowerCase().trim())
+          .filter((t) => ALLOWED_TAGS.includes(t));
+      }
+    } catch {
+      // Fallback se não vier JSON válido: usar o texto como summary simples
+      summary = content.trim();
+      tags = [];
+    }
   }
 
   const newsRef = db.collection('news').doc();
@@ -73,10 +116,11 @@ async function main() {
     source,
     region,
     summary,
+    tags,
     publishedAt: nowIso,
   }, { merge: true });
 
-  console.log(JSON.stringify({ ok: true, id: newsRef.id, summary }, null, 2));
+  console.log(JSON.stringify({ ok: true, id: newsRef.id, summary, tags }, null, 2));
 }
 
 main().catch((err) => {

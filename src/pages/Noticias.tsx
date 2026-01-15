@@ -14,6 +14,7 @@ export type NewsItem = {
   source: string;
   publishedAt: string; // ISO string
   region: NewsRegion;
+  tags?: string[];
 };
 
 function detectRegionFromHost(host: string): NewsRegion {
@@ -123,6 +124,18 @@ export default function Noticias() {
                 </div>
                 <h2 className="text-lg font-semibold text-blue-900 mb-2 line-clamp-2">{item.title}</h2>
                 <p className="text-sm text-blue-800 mb-3 line-clamp-4">{item.summary}</p>
+                {item.tags && item.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-2">
+                    {item.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
               <div className="mt-2 flex items-center justify-between">
                 <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
