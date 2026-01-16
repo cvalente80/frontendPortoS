@@ -87,9 +87,18 @@ URL: ${url}`;
     }
     const data = await resp.json().catch(() => ({}));
     const firstChoice = data && Array.isArray(data.choices) ? data.choices[0] : undefined;
-    const content = firstChoice && firstChoice.message && typeof firstChoice.message.content === 'string'
+    let content = firstChoice && firstChoice.message && typeof firstChoice.message.content === 'string'
       ? firstChoice.message.content
       : '';
+
+    // Remover ```json ... ``` se o modelo devolver bloco de código
+    const fenceMatch = content.match(/```[a-zA-Z]*[\s\S]*?```/);
+    if (fenceMatch) {
+      content = fenceMatch[0]
+        .replace(/^```[a-zA-Z]*\s*/i, '')
+        .replace(/```\s*$/i, '')
+        .trim();
+    }
 
     try {
       const parsed = JSON.parse(content);
@@ -102,8 +111,12 @@ URL: ${url}`;
           .filter((t) => ALLOWED_TAGS.includes(t));
       }
     } catch {
-      // Fallback se não vier JSON válido: usar o texto como summary simples
-      summary = content.trim();
+      // Fallback se não vier JSON válido: tentar extrair só o texto sem "json" ou fences
+      summary = content
+        .replace(/```[a-zA-Z]*?/g, '')
+        .replace(/```/g, '')
+        .replace(/^json\s*:/i, '')
+        .trim();
       tags = [];
     }
   }
