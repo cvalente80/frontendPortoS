@@ -6,7 +6,6 @@ import {
   browserPopupRedirectResolver,
   browserLocalPersistence,
   inMemoryPersistence,
-  setPersistence,
   GoogleAuthProvider,
   signInWithPopup,
   signInWithRedirect,
@@ -40,7 +39,7 @@ try {
   // ignore
 }
 
-// Initialize Auth with popup resolver only; avoid persistence here
+// Initialize Auth with popup resolver and persistence configured upfront
 export const auth = (() => {
   try {
     if (typeof window === "undefined") {
@@ -48,6 +47,8 @@ export const auth = (() => {
     }
     return initializeAuth(app, {
       popupRedirectResolver: browserPopupRedirectResolver,
+      // Tenta guardar sessão em storage; se não der, cai para in-memory
+      persistence: [browserLocalPersistence, inMemoryPersistence],
     });
   } catch {
     return getAuth(app);
@@ -56,25 +57,6 @@ export const auth = (() => {
 
 // Set UI language to Portuguese
 auth.languageCode = "pt";
-
-// Set persistence after auth is ready (fallback to in-memory)
-async function ensureAuthPersistence() {
-  try {
-    await setPersistence(auth, browserLocalPersistence);
-  } catch {
-    try {
-      await setPersistence(auth, inMemoryPersistence);
-    } catch {
-      // ignore if even in-memory is unavailable
-    }
-  }
-}
-
-// Run persistence setup non-blocking in the browser
-if (typeof window !== "undefined") {
-  // No await to avoid blocking initial render
-  ensureAuthPersistence().catch(() => {});
-}
 
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: "select_account" });
