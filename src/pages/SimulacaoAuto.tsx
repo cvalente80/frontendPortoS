@@ -69,6 +69,14 @@ export default function SimulacaoAuto() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const busyRef = useRef(false);
 
+  // Determina a "marca" do site actual (para assinatura dinâmica no email)
+  const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+  let siteBrand = 'Ansião';
+  if (host.includes('aurelio')) siteBrand = 'Aurélio';
+  else if (host.includes('povoaseg') || host.includes('povoa')) siteBrand = 'Póvoa';
+  else if (host.includes('lisboaseg') || host.includes('lisboa')) siteBrand = 'Lisboa';
+  else if (host.includes('portoseg') || host.includes('porto')) siteBrand = 'Porto';
+
 
   function handleChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
     const target = e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
@@ -203,6 +211,8 @@ export default function SimulacaoAuto() {
       coberturas: form.coberturas.join(", "),
       outrosPedidos: form.outrosPedidos?.trim() ? form.outrosPedidos.trim() : '-',
       resultado: resumo,
+      // Usado no template EmailJS como {{siteURL}} Seguros
+      siteURL: siteBrand,
     };
     try {
       // Firestore persistence if authenticated (will be after requireAuth)
