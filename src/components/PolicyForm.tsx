@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { savePolicy, type PolicyRecord, type PaymentFrequency } from '../utils/policies';
 import { useTranslation } from 'react-i18next';
+import emailjs from '@emailjs/browser';
+import { EMAILJS_SERVICE_ID_POLICY, EMAILJS_TEMPLATE_ID_POLICY, EMAILJS_USER_ID_POLICY } from '../emailjs.config';
 
 export type PolicyFormProps = {
   uid: string;
@@ -110,6 +112,29 @@ export default function PolicyForm({ uid, policyId, initial, onSaved, submitLabe
         status: 'em_validacao',
       };
       await savePolicy(uid, policyId, payload);
+      // Enviar email de confirmação ao utilizador (não bloqueante para o fluxo)
+      try {
+        if (email) {
+          const subject = t('policies:email.subject', 'Recebemos os dados da sua apólice');
+          const body = t(
+            'policies:email.body',
+            'Olá, recebemos os dados necessários para preparar a sua apólice. Em breve um consultor irá contactá-lo com os próximos passos.'
+          );
+          await emailjs.send(
+            EMAILJS_SERVICE_ID_POLICY,
+            EMAILJS_TEMPLATE_ID_POLICY,
+            {
+              email,
+              subject,
+              body,
+            },
+            EMAILJS_USER_ID_POLICY
+          );
+        }
+      } catch (mailErr) {
+        // Não falhar o fluxo de gravação se o email não for enviado
+        console.warn('[PolicyForm] emailjs policy notify error', mailErr);
+      }
       setOk(t('policies:form.saved'));
       onSaved?.(payload);
     } catch (e: any) {
