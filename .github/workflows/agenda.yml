@@ -1,0 +1,41 @@
+name: Upsert agenda with AI
+
+on:
+  workflow_dispatch:
+    inputs:
+      region:
+        description: 'Region (ansiao|povoa|lisboa|porto)'
+        required: true
+        default: 'ansiao'
+      source_url:
+        description: 'URL da agenda oficial (Câmara Municipal ou equivalente)'
+        required: false
+      month_key:
+        description: 'Mês (YYYY-MM). Em branco usa o mês atual do servidor.'
+        required: false
+        default: ''
+
+jobs:
+  upsert-agenda:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install functions deps
+        run: npm install
+        working-directory: functions
+
+      - name: Upsert agenda document with AI
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+        run: |
+          node scripts/upsertAgendaWithAi.mjs "${{ github.event.inputs.region }}" "${{ github.event.inputs.source_url }}" "${{ github.event.inputs.month_key }}"
+        working-directory: functions

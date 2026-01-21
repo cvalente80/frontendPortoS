@@ -24,6 +24,7 @@ import ProdutoCondominio from "./pages/ProdutoCondominio";
 import SimulacaoCondominio from "./pages/SimulacaoCondominio";
 import PoliticaRGPD from "./pages/PoliticaRGPD";
 import Noticias from "./pages/Noticias";
+import Agenda from "./pages/Agenda";
 import './App.css';
 import ChatInbox from './pages/admin/ChatInbox';
 import ChatThread from './pages/admin/ChatThread';
@@ -106,6 +107,7 @@ function App(): React.ReactElement {
           <Route path="simulacao-condominio" element={<SimulacaoCondominio />} />
           <Route path="politica-rgpd" element={<PoliticaRGPD />} />
           <Route path="noticias" element={<Noticias />} />
+          <Route path="agenda" element={<Agenda />} />
     {/* Admin chat (guarded) */}
     <Route path="admin/inbox" element={<AdminRoute><ChatInbox /></AdminRoute>} />
     <Route path="admin/chat/:chatId" element={<AdminRoute><ChatThread /></AdminRoute>} />

@@ -31,6 +31,11 @@ export default function Noticias() {
   const base = lang === "en" ? "en" : "pt";
   const [items, setItems] = useState<NewsItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
+  const toggleExpanded = (id: string) => {
+    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   useEffect(() => {
     async function load() {
@@ -107,51 +112,72 @@ export default function Noticias() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {items.map((item) => (
-            <article
-              key={item.id || item.url}
-              className="bg-white rounded-xl shadow border border-blue-100 p-5 flex flex-col justify-between"
-            >
-              <div>
-                <div className="text-xs uppercase tracking-wide text-blue-500 mb-1">
-                  {new Date(item.publishedAt).toLocaleDateString(lang === "en" ? "en-GB" : "pt-PT", {
-                    day: "2-digit",
-                    month: "2-digit",
-                    year: "numeric",
-                  })}
-                  {" • "}
-                  {item.source}
-                </div>
-                <h2 className="text-lg font-semibold text-blue-900 mb-2 line-clamp-2">{item.title}</h2>
-                <p className="text-sm text-blue-800 mb-3 line-clamp-4">{item.summary}</p>
-                {item.tags && item.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {item.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
+          {items.map((item) => {
+            const key = item.id || item.url;
+            const isExpanded = !!expanded[key];
+            return (
+              <article
+                key={key}
+                className="bg-white rounded-xl shadow border border-blue-100 p-5 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="text-xs uppercase tracking-wide text-blue-500 mb-1">
+                    {new Date(item.publishedAt).toLocaleDateString(lang === "en" ? "en-GB" : "pt-PT", {
+                      day: "2-digit",
+                      month: "2-digit",
+                      year: "numeric",
+                    })}
+                    {" • "}
+                    {item.source}
                   </div>
-                )}
-              </div>
-              <div className="mt-2 flex items-center justify-between">
-                <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-                  {regionLabel}
-                </span>
-                <a
-                  href={item.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm font-semibold text-blue-700 hover:text-blue-900 underline"
-                >
-                  {lang === "en" ? "Read on source site" : "Ler no site de origem"}
-                </a>
-              </div>
-            </article>
-          ))}
+                  <h2 className="text-lg font-semibold text-blue-900 mb-2 line-clamp-2">{item.title}</h2>
+                  <p
+                    className={
+                      "text-sm text-blue-800 mb-2 " +
+                      (isExpanded ? "" : "line-clamp-4")
+                    }
+                  >
+                    {item.summary}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => toggleExpanded(key)}
+                    className="mb-2 inline-flex items-center text-xs font-semibold text-blue-700 hover:text-blue-900"
+                  >
+                    <span className="mr-1 text-base leading-none">
+                      {isExpanded ? "−" : "+"}
+                    </span>
+                    {lang === "en" ? (isExpanded ? "Show less" : "Read more") : isExpanded ? "Ver menos" : "Ver mais"}
+                  </button>
+                  {item.tags && item.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mb-2">
+                      {item.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-medium text-blue-700"
+                        >
+                          #{tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="inline-flex items-center rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+                    {regionLabel}
+                  </span>
+                  <a
+                    href={item.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm font-semibold text-blue-700 hover:text-blue-900 underline"
+                  >
+                    {lang === "en" ? "Read on source site" : "Ler no site de origem"}
+                  </a>
+                </div>
+              </article>
+            );
+          })}
         </div>
       )}
     </div>

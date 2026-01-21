@@ -44,6 +44,19 @@ const ALLOWED_TAGS = [
   'nacional'
 ];
 
+async function fetchArticleText(url) {
+  if (!url) return '';
+  try {
+    const resp = await fetch(url);
+    if (!resp.ok) return '';
+    const text = await resp.text();
+    // limitar tamanho para não explodir o prompt
+    return text.slice(0, 8000);
+  } catch {
+    return '';
+  }
+}
+
 async function main() {
   const [,, title, url, source, regionArg] = process.argv;
   if (!title || !url || !source) {
@@ -58,14 +71,16 @@ async function main() {
   let summary = '';
   let tags = [];
   if (openaiKey) {
+    const articleText = await fetchArticleText(url);
     const prompt = `Tens de responder apenas em JSON.
 Campos obrigatórios:
-- summary: resumo curto (3-4 frases, português de Portugal, neutro, sem copiar texto literal).
+- summary: resumo detalhado (8-12 frases organizadas em 2-4 parágrafos, português de Portugal, neutro, sem copiar texto literal palavra por palavra, mas captando os pontos principais da notícia).
 - tags: array com 2-4 etiquetas em minúsculas, escolhidas de entre esta lista: ${ALLOWED_TAGS.join(', ')}.
 
 Notícia:
 Título: "${title}"
-URL: ${url}`;
+URL: ${url}
+${articleText ? `Conteúdo (HTML/truncado):\n${articleText}` : ''}`;
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
