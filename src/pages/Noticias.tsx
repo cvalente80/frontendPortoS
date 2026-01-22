@@ -4,7 +4,7 @@ import { collection, getDocs, limit, orderBy, query, where } from "firebase/fire
 import Seo from "../components/Seo";
 import { db } from "../firebase";
 
-export type NewsRegion = "ansiao" | "povoa" | "lisboa" | "porto" | "nacional";
+export type NewsRegion = "ansiao" | "povoa" | "lisboa" | "porto" | "pombal" | "nacional";
 
 export type NewsItem = {
   id?: string;
@@ -19,6 +19,7 @@ export type NewsItem = {
 
 function detectRegionFromHost(host: string): NewsRegion {
   const h = host.toLowerCase();
+  if (h.includes("pombalseg") || h.includes("pombal")) return "pombal";
   if (h.includes("lisboaseg") || h.includes("lisboa")) return "lisboa";
   if (h.includes("povoaseg") || h.includes("povoa")) return "povoa";
   if (h.includes("portoseg") || h.includes("porto")) return "porto";
@@ -70,6 +71,8 @@ export default function Noticias() {
     if (typeof window === "undefined") return "";
     const r = detectRegionFromHost(window.location.hostname);
     switch (r) {
+      case "pombal":
+        return "Pombal (Leiria)";
       case "lisboa":
         return "Lisboa";
       case "povoa":

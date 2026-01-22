@@ -73,6 +73,11 @@ export default function Seo({ title, description, image, canonicalPath, noIndex,
       cityDesc = 'Ansião (Leiria)';
       addressLocality = 'Ansião';
       addressRegion = 'Leiria';
+    } else if (host.includes('pombalseg') || host.includes('pombal')) {
+      brandName = 'Pombal Seguros';
+      cityDesc = 'Pombal (Leiria)';
+      addressLocality = 'Pombal';
+      addressRegion = 'Leiria';
     } else if (host.includes('povoaseg') || host.includes('povoa')) {
       brandName = 'Póvoa Seguros';
       cityDesc = 'Póvoa de Santa Iria (Vila Franca de Xira)';

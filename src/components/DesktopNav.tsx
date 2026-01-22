@@ -16,11 +16,12 @@ export function DesktopNav() {
   const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
   let brandName = 'Ansião Seguros';
   if (host.includes('aurelio')) brandName = 'Aurélio Seguros';
+  else if (host.includes('pombalseg') || host.includes('pombal')) brandName = 'Pombal Seguros';
   else if (host.includes('povoaseg') || host.includes('povoa')) brandName = 'Póvoa Seguros';
   else if (host.includes('lisboaseg') || host.includes('lisboa')) brandName = 'Lisboa Seguros';
   else if (host.includes('portoseg') || host.includes('porto')) brandName = 'Porto Seguros';
 
-  // Close profile menu on outside click or Escape
+  // Close profile menu on outside click or Escape cvalente eduardo
   useEffect(() => {
     function onDocPointer(e: MouseEvent | TouchEvent) {
       if (!profileOpen) return;
