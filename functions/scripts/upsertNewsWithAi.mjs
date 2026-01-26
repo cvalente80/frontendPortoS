@@ -63,7 +63,7 @@ async function main() {
     console.error('Usage: node upsertNewsWithAi.mjs "title" "url" "source" [region]');
     process.exit(1);
   }
-  const allowedRegions = new Set(['ansiao', 'povoa', 'lisboa', 'porto', 'pombal', 'nacional']);
+  const allowedRegions = new Set(['ansiao', 'povoa', 'lisboa', 'porto', 'pombal', 'sintra', 'nacional']);
   const regionRaw = String(regionArg || 'nacional').toLowerCase();
   const region = allowedRegions.has(regionRaw) ? regionRaw : 'nacional';
 

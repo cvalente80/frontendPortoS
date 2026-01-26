@@ -46,6 +46,7 @@ async function discoverAgendaUrl(region, monthLabel, explicitUrl) {
     povoa: 'Póvoa de Santa Iria',
     lisboa: 'Lisboa',
     porto: 'Porto',
+    sintra: 'Sintra',
   };
   const humanRegion = regionNames[region] || region;
 

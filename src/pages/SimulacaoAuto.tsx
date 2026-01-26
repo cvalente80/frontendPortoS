@@ -73,6 +73,7 @@ export default function SimulacaoAuto() {
   const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
   let siteBrand = 'Ansião';
   if (host.includes('aurelio')) siteBrand = 'Aurélio';
+  else if (host.includes('sintraseg') || host.includes('sintra')) siteBrand = 'Sintra';
   else if (host.includes('pombalseg') || host.includes('pombal')) siteBrand = 'Pombal';
   else if (host.includes('povoaseg') || host.includes('povoa')) siteBrand = 'Póvoa';
   else if (host.includes('lisboaseg') || host.includes('lisboa')) siteBrand = 'Lisboa';

@@ -73,6 +73,11 @@ export default function Seo({ title, description, image, canonicalPath, noIndex,
       cityDesc = 'Ansião (Leiria)';
       addressLocality = 'Ansião';
       addressRegion = 'Leiria';
+    } else if (host.includes('sintraseg') || host.includes('sintra')) {
+      brandName = 'Sintra Seguros';
+      cityDesc = 'Sintra';
+      addressLocality = 'Sintra';
+      addressRegion = 'Lisboa';
     } else if (host.includes('pombalseg') || host.includes('pombal')) {
       brandName = 'Pombal Seguros';
       cityDesc = 'Pombal (Leiria)';

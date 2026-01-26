@@ -45,6 +45,13 @@ async function main() {
       url: 'https://www.porto.pt/pt/eventos',
       title: 'Agenda cultural - Porto',
     },
+    {
+      '@search.action': 'upload',
+      id: 'sintra-agenda',
+      region: 'sintra',
+      url: 'https://cm-sintra.pt/',
+      title: 'Agenda cultural - Sintra',
+    },
   ];
 
   const url = `${endpoint.replace(/\/$/, '')}/indexes/${encodeURIComponent(indexName)}/docs/index?api-version=2023-11-01`;

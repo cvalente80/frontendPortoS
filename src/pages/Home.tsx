@@ -81,6 +81,20 @@ export default function Home() {
   const base = lang === 'en' ? 'en' : 'pt';
   const produtos = useHomeProducts();
   const produtosEmp = useBusinessProducts();
+
+	// Derivar marca pelo domínio para personalizar textos (Ansião, Sintra, etc.)
+	const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+	let brandName = 'Ansião Seguros';
+	if (host.includes('aurelio')) brandName = 'Aurélio Seguros';
+	else if (host.includes('sintraseg') || host.includes('sintra')) brandName = 'Sintra Seguros';
+	else if (host.includes('pombalseg') || host.includes('pombal')) brandName = 'Pombal Seguros';
+	else if (host.includes('povoaseg') || host.includes('povoa')) brandName = 'Póvoa Seguros';
+	else if (host.includes('lisboaseg') || host.includes('lisboa')) brandName = 'Lisboa Seguros';
+	else if (host.includes('portoseg') || host.includes('porto')) brandName = 'Porto Seguros';
+
+	const rawBenefitsTitle = t('benefitsTitle');
+	const benefitsTitle = rawBenefitsTitle
+		.replace(/Ansião Seguros/g, brandName);
 	return (
 		<div className="min-h-screen bg-white flex flex-col relative">
 			<Seo
@@ -138,7 +152,7 @@ export default function Home() {
 			<section className="py-16 px-6 bg-white">
 				<div className="max-w-4xl mx-auto bg-blue-50 rounded-xl shadow-xl p-8">
 					<h2 className="text-2xl font-bold text-blue-900 mb-4 text-center">
-						{t('benefitsTitle')}
+						{benefitsTitle}
 					</h2>
 					<ul className="space-y-3 text-blue-800 text-lg pl-0">
 						{["🤝", "⚡", "🏢", "📦"].map((icon, idx) => (

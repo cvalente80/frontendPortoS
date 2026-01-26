@@ -34,6 +34,7 @@ export default function Contato() {
   const { lang } = useParams();
   const base = lang === 'en' ? 'en' : 'pt';
   const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+  const isSintra = host.includes('sintraseg') || host.includes('sintra');
   const isPombal = host.includes('pombalseg') || host.includes('pombal');
   const isPovoa = host.includes('povoaseg') || host.includes('povoa');
   const isLisboa = host.includes('lisboaseg') || host.includes('lisboa');
@@ -46,7 +47,9 @@ export default function Contato() {
         ? 'Porto, Portugal'
         : isPombal
           ? 'Pombal, Leiria, Portugal'
-          : 'Ansião, Leiria, Portugal';
+          : isSintra
+            ? 'Sintra, Portugal'
+            : 'Ansião, Leiria, Portugal';
   const mapSrc = `https://www.google.com/maps?q=${encodeURIComponent(mapQuery)}&hl=${base === 'en' ? 'en' : 'pt-PT'}&z=13&output=embed`;
   const mapLink = `https://maps.google.com/?q=${encodeURIComponent(mapQuery)}`;
   const [form, setForm] = useState<FormState>({
@@ -194,7 +197,9 @@ export default function Contato() {
         ? 'Porto, Portugal.'
         : isPombal
           ? 'Pombal, distrito de Leiria.'
-          : t('map.whereDesc');
+          : isSintra
+            ? 'Sintra, distrito de Lisboa.'
+            : t('map.whereDesc');
 
   const iframeTitle = isLisboa
     ? 'Mapa de Lisboa, Portugal'
@@ -204,7 +209,9 @@ export default function Contato() {
         ? 'Mapa do Porto, Portugal'
         : isPombal
           ? 'Mapa de Pombal, distrito de Leiria'
-          : t('map.iframeTitle');
+          : isSintra
+            ? 'Mapa de Sintra, distrito de Lisboa'
+            : t('map.iframeTitle');
 
   return (
     <div className="container mx-auto px-4 py-8">

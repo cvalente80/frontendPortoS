@@ -4,7 +4,7 @@ import { collection, getDocs, limit, query, where } from "firebase/firestore";
 import Seo from "../components/Seo";
 import { db } from "../firebase";
 
-export type AgendaRegion = "ansiao" | "povoa" | "lisboa" | "porto";
+export type AgendaRegion = "ansiao" | "povoa" | "lisboa" | "porto" | "sintra";
 
 export type AgendaEvent = {
   id?: string;
@@ -26,6 +26,7 @@ export type AgendaDoc = {
 
 function detectRegionFromHost(host: string): AgendaRegion {
   const h = host.toLowerCase();
+  if (h.includes("sintraseg") || h.includes("sintra")) return "sintra";
   if (h.includes("lisboaseg") || h.includes("lisboa")) return "lisboa";
   if (h.includes("povoaseg") || h.includes("povoa")) return "povoa";
   if (h.includes("portoseg") || h.includes("porto")) return "porto";
@@ -106,6 +107,8 @@ export default function Agenda() {
     if (typeof window === "undefined") return "";
     const r = detectRegionFromHost(window.location.hostname);
     switch (r) {
+      case "sintra":
+        return "Sintra";
       case "lisboa":
         return "Lisboa";
       case "povoa":

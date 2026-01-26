@@ -49,6 +49,7 @@ function App(): React.ReactElement {
     const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
     let brandName = 'Ansião Seguros';
     if (host.includes('aurelio')) brandName = 'Aurélio Seguros';
+    else if (host.includes('sintraseg') || host.includes('sintra')) brandName = 'Sintra Seguros';
     else if (host.includes('pombalseg') || host.includes('pombal')) brandName = 'Pombal Seguros';
     else if (host.includes('povoaseg') || host.includes('povoa')) brandName = 'Póvoa Seguros';
     else if (host.includes('lisboaseg') || host.includes('lisboa')) brandName = 'Lisboa Seguros';

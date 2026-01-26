@@ -1056,7 +1056,7 @@ const resources = {
         mreb: { name: 'Seguro Multirriscos Empresarial', desc: 'Cobertura para as suas instalações e bens empresariais.' },
         condo: { name: 'Seguro Condomínio', desc: 'Proteção completa para edifícios e áreas comuns.' }
       },
-      benefitsTitle: 'Por que escolher Ansião Seguros?',
+      benefitsTitle: 'Porque escolher Ansião Seguros?',
       benefits: [
         'Atendimento personalizado e consultoria especializada',
         'Simulação rápida e automática realizada pelos nossos sistemas inteligentes.',
