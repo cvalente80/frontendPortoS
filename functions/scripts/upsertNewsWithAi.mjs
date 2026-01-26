@@ -63,7 +63,9 @@ async function main() {
     console.error('Usage: node upsertNewsWithAi.mjs "title" "url" "source" [region]');
     process.exit(1);
   }
-  const region = (regionArg || 'nacional');
+  const allowedRegions = new Set(['ansiao', 'povoa', 'lisboa', 'porto', 'pombal', 'nacional']);
+  const regionRaw = String(regionArg || 'nacional').toLowerCase();
+  const region = allowedRegions.has(regionRaw) ? regionRaw : 'nacional';
 
   const openaiKey = env('OPENAI_API_KEY');
   const openaiModel = env('OPENAI_MODEL', 'gpt-4o-mini');
