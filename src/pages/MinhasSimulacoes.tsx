@@ -100,7 +100,18 @@ export default function MinhasSimulacoes(): React.ReactElement {
         const recipientEmail: string | undefined = simData?.payload?.email || simData?.email || user.email || undefined;
         if (recipientEmail) {
           showToast(t('mysims:pdf.emailSending'), 'info');
-          const subject = t('mysims:pdf.emailSubject') as string;
+          // Derivar marca pelo domínio para personalizar o assunto do email
+          const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+          let brandName = 'Ansião Seguros';
+          if (host.includes('aurelio')) brandName = 'Aurélio Seguros';
+          else if (host.includes('sintraseg') || host.includes('sintra')) brandName = 'Sintra Seguros';
+          else if (host.includes('pombalseg') || host.includes('pombal')) brandName = 'Pombal Seguros';
+          else if (host.includes('povoaseg') || host.includes('povoa')) brandName = 'Póvoa Seguros';
+          else if (host.includes('lisboaseg') || host.includes('lisboa')) brandName = 'Lisboa Seguros';
+          else if (host.includes('portoseg') || host.includes('porto')) brandName = 'Porto Seguros';
+
+          const subjectBase = t('mysims:pdf.emailSubject') as string;
+          const subject = subjectBase.replace(/Ansião Seguros/g, brandName);
           const nameForEmail = simData?.payload?.nome || user.displayName || 'Cliente';
           // Construir base dinâmica: domínio atual + BASE_URL (Vite)
           const origin = typeof window !== 'undefined' ? window.location.origin : 'https://cvalente80.github.io';
