@@ -48,12 +48,31 @@ function App(): React.ReactElement {
     const base = lang === 'en' ? 'en' : (lang === 'pt' ? 'pt' : 'pt');
     const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
     let brandName = 'Ansião Seguros';
-    if (host.includes('aurelio')) brandName = 'Aurélio Seguros';
-    else if (host.includes('sintraseg') || host.includes('sintra')) brandName = 'Sintra Seguros';
-    else if (host.includes('pombalseg') || host.includes('pombal')) brandName = 'Pombal Seguros';
-    else if (host.includes('povoaseg') || host.includes('povoa')) brandName = 'Póvoa Seguros';
-    else if (host.includes('lisboaseg') || host.includes('lisboa')) brandName = 'Lisboa Seguros';
-    else if (host.includes('portoseg') || host.includes('porto')) brandName = 'Porto Seguros';
+    let backgroundAsset = 'imagens/image.png';
+    if (host.includes('aurelio')) {
+      brandName = 'Aurélio Seguros';
+      backgroundAsset = 'imagens/image.png';
+    }
+    else if (host.includes('sintraseg') || host.includes('sintra')) {
+      brandName = 'Sintra Seguros';
+      backgroundAsset = 'imagens/bg-sintra.jpg';
+    }
+    else if (host.includes('pombalseg') || host.includes('pombal')) {
+      brandName = 'Pombal Seguros';
+      backgroundAsset = 'imagens/bg-pombal.jpg';
+    }
+    else if (host.includes('povoaseg') || host.includes('povoa')) {
+      brandName = 'Póvoa Seguros';
+      backgroundAsset = 'imagens/bg-povoa.jpg';
+    }
+    else if (host.includes('lisboaseg') || host.includes('lisboa')) {
+      brandName = 'Lisboa Seguros';
+      backgroundAsset = 'imagens/bg-lisboa.jpg';
+    }
+    else if (host.includes('portoseg') || host.includes('porto')) {
+      brandName = 'Porto Seguros';
+      backgroundAsset = 'imagens/bg-porto.jpg';
+    }
     // Force i18n language to follow URL param (robust on first load / GH Pages)
     useEffect(() => {
       if (lang === 'pt' || lang === 'en') {
@@ -67,14 +86,14 @@ function App(): React.ReactElement {
     }
     return (
       <>
-        {/* Marca de água da vila de Ansião no body */}
+        {/* Marca de água no body */}
         <div style={{
           position: 'fixed',
           inset: 0,
           zIndex: 0,
           pointerEvents: 'none',
           opacity: 0.12,
-          background: `url('${import.meta.env.BASE_URL}imagens/image.png') center center / cover no-repeat`
+          background: `url('${import.meta.env.BASE_URL}${backgroundAsset}') center center / cover no-repeat`
         }} />
         {/* Navbar responsiva: Mobile (md-) e Desktop (md+) */}
         <ResponsiveGate mobile={<MobileNav />} desktop={<DesktopNav />} />
