@@ -63,7 +63,7 @@ function App(): React.ReactElement {
     }
     else if (host.includes('povoaseg') || host.includes('povoa')) {
       brandName = 'Póvoa Seguros';
-      backgroundAsset = 'imagens/bg-povoa.jpg';
+      backgroundAsset = 'imagens/bg-povoa1.jpg';
     }
     else if (host.includes('lisboaseg') || host.includes('lisboa')) {
       brandName = 'Lisboa Seguros';
