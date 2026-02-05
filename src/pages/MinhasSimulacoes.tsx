@@ -3,7 +3,7 @@ import Seo from "../components/Seo";
 import { useAuth } from '../context/AuthContext';
 import { db, storage } from '../firebase';
 import { getApp } from 'firebase/app';
-import { collection, collectionGroup, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query, Timestamp, updateDoc, deleteField } from 'firebase/firestore';
+import { collection, collectionGroup, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query, Timestamp, updateDoc, deleteField, serverTimestamp } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useTranslation } from 'react-i18next';
 import emailjs from '@emailjs/browser';
@@ -19,6 +19,8 @@ type SimulationDoc = {
   title?: string;
   summary?: string;
   pdfUrl?: string;
+  policySubmitted?: boolean;
+  policySubmittedAt?: Timestamp | null;
   // Dados adicionais guardados pela página de simulação (ex.: auto: matricula, marca, modelo, ...)
   payload?: Record<string, any>;
   ownerUid?: string; // preenchido quando for consulta admin (collectionGroup)
@@ -26,7 +28,7 @@ type SimulationDoc = {
 
 export default function MinhasSimulacoes(): React.ReactElement {
   const { user, displayName, isAdmin, refreshAdminStatus } = useAuth();
-  const { t } = useTranslation(['mysims', 'common']);
+  const { t, i18n } = useTranslation(['mysims', 'common']);
   const [items, setItems] = useState<SimulationDoc[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -295,6 +297,9 @@ export default function MinhasSimulacoes(): React.ReactElement {
                 <option value="all">{t('mysims:filters.all')}</option>
                 <option value="em_processamento">{t('mysims:statuses.em_processamento')}</option>
                 <option value="simulacao_enviada">{t(isAdmin ? 'mysims:statuses.simulacao_enviada' : 'mysims:statuses.simulacao_recebida')}</option>
+                {!isAdmin && (
+                  <option value="simulacao_aprovada_por_si">{t('mysims:statuses.simulacao_aprovada_por_si')}</option>
+                )}
               </select>
             </div>
           </div>
@@ -320,7 +325,12 @@ export default function MinhasSimulacoes(): React.ReactElement {
               .filter((it) => {
                 const typeOk = filter === 'all' || it.type === filter;
                 const hasPdf = Boolean((it as any)?.pdfUrl);
-                const statusKey = hasPdf ? 'simulacao_enviada' : 'em_processamento';
+                const policySubmitted = Boolean((it as any)?.policySubmitted);
+                const statusKey = !isAdmin && policySubmitted
+                  ? 'simulacao_aprovada_por_si'
+                  : hasPdf
+                    ? 'simulacao_enviada'
+                    : 'em_processamento';
                 const statusOk = statusFilter === 'all' || statusFilter === statusKey;
                 return typeOk && statusOk;
               })
@@ -343,9 +353,18 @@ export default function MinhasSimulacoes(): React.ReactElement {
                   label: t(isAdmin ? 'mysims:statuses.simulacao_enviada' : 'mysims:statuses.simulacao_recebida'),
                   className: 'bg-green-100 border border-green-300 text-green-800',
                 },
+                simulacao_aprovada_por_si: {
+                  label: t('mysims:statuses.simulacao_aprovada_por_si'),
+                  className: 'bg-blue-100 border border-blue-300 text-blue-800',
+                },
               };
               const hasPdf = Boolean((it as any)?.pdfUrl);
-              const statusKey: keyof typeof STATUS_MAP = hasPdf ? 'simulacao_enviada' : 'em_processamento';
+              const policySubmitted = Boolean((it as any)?.policySubmitted);
+              const statusKey: keyof typeof STATUS_MAP = !isAdmin && policySubmitted
+                ? 'simulacao_aprovada_por_si'
+                : hasPdf
+                  ? 'simulacao_enviada'
+                  : 'em_processamento';
               const statusInfo = STATUS_MAP[statusKey];
               return (
                 <li key={it.id} className="p-4 border border-blue-100 rounded bg-white shadow-sm flex flex-col gap-2">
@@ -365,7 +384,7 @@ export default function MinhasSimulacoes(): React.ReactElement {
                     </div>
                   </div>
                   {date && <p className="text-xs text-blue-700">{date}</p>}
-                  {/* Detalhe estruturado para Auto; fallback para summary multi-linha */}
+                  {/* Detalhe estruturado para Auto/Habitação; fallback para summary multi-linha */}
                   {it.type === 'auto' ? (
                     (() => {
                       const p = (it as any).payload || {};
@@ -393,6 +412,143 @@ export default function MinhasSimulacoes(): React.ReactElement {
                           <div>{t('mysims:detail.postalCode')}: {p.codigoPostal || '-'}</div>
                           <div className="mt-2">{t('mysims:detail.coverages')}: {cob || '-'}</div>
                           <div>{t('mysims:detail.others')}: {outros}</div>
+                        </div>
+                      );
+                    })()
+                  ) : it.type === 'habitacao' ? (
+                    (() => {
+                      const p = (it as any).payload || {};
+                      const hasMeaningfulPayload = !!p && typeof p === 'object' && [
+                        'situacao',
+                        'tipoImovel',
+                        'utilizacao',
+                        'anoConstrucao',
+                        'area',
+                        'codigoPostal',
+                        'construcao',
+                        'seguranca',
+                        'capitalEdificio',
+                        'capitalConteudo',
+                        'produto',
+                        'extras',
+                        'detalhes',
+                        'nome',
+                        'email',
+                        'telefone',
+                        'contribuinte',
+                        'nif',
+                      ].some((k) => {
+                        const v = (p as any)[k];
+                        if (Array.isArray(v)) return v.length > 0;
+                        return v !== undefined && v !== null && String(v).trim() !== '';
+                      });
+
+                      if (!hasMeaningfulPayload) {
+                        return it.summary ? (
+                          <p className="text-sm text-blue-800 whitespace-pre-line">{it.summary}</p>
+                        ) : null;
+                      }
+                      const lang = (i18n.language || 'pt').toLowerCase();
+                      const isEn = lang.startsWith('en');
+
+                      const locale = isEn ? 'en-GB' : 'pt-PT';
+                      const fmtMoney = (raw?: string) => {
+                        const n = Number(raw);
+                        if (!raw || !isFinite(n) || n <= 0) return '-';
+                        try {
+                          return new Intl.NumberFormat(locale, { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(n) + ' €';
+                        } catch {
+                          return String(raw) + ' €';
+                        }
+                      };
+
+                      const mapLabel = (value: any, dict: Record<string, string>) => {
+                        const v = (value ?? '').toString();
+                        return dict[v] || (v || '-');
+                      };
+
+                      const situacao = mapLabel(p.situacao, isEn
+                        ? { proprietario: 'Owner', inquilino: 'Tenant' }
+                        : { proprietario: 'Proprietário', inquilino: 'Inquilino' }
+                      );
+                      const tipoImovel = mapLabel(p.tipoImovel, isEn
+                        ? { apartamento: 'Apartment', moradia: 'House' }
+                        : { apartamento: 'Apartamento', moradia: 'Moradia' }
+                      );
+                      const utilizacao = mapLabel(p.utilizacao, isEn
+                        ? { permanente: 'Primary home', secundaria: 'Second home', arrendamento: 'Rental' }
+                        : { permanente: 'Permanente', secundaria: 'Secundária', arrendamento: 'Arrendamento' }
+                      );
+                      const construcao = mapLabel(p.construcao, isEn
+                        ? { betao: 'Reinforced concrete', alvenaria: 'Masonry', madeira: 'Wood' }
+                        : { betao: 'Betão', alvenaria: 'Alvenaria', madeira: 'Madeira' }
+                      );
+                      const produto = mapLabel(p.produto, isEn
+                        ? { base: 'Building', intermedio: 'Building + Contents', completo: 'Full' }
+                        : { base: 'Imóvel', intermedio: 'Imóvel + Recheio', completo: 'Imóvel + Recheio + Fenómenos Sísmicos' }
+                      );
+
+                      const seguranca = Array.isArray(p.seguranca) ? p.seguranca.join(', ') : (p.seguranca || '-');
+                      const extras = Array.isArray(p.extras) ? p.extras.join(', ') : (p.extras || '-');
+                      const detalhes = (p.detalhes || '').toString().trim() || '-';
+                      const nif = p.contribuinte || p.nif || '-';
+                      const telefone = (p.telefone || '').toString().trim() || '-';
+                      const email = (p.email || '').toString().trim() || '-';
+                      const nome = (p.nome || '').toString().trim() || '-';
+
+                      const moradaTomador = (p.moradaTomador || '').toString().trim() || '-';
+                      const codigoPostalTomador = (p.codigoPostalTomador || '').toString().trim() || '-';
+                      const localidadeTomador = (p.localidadeTomador || '').toString().trim() || '-';
+
+                      const moradaRiscoIgualTomador = Boolean(p.moradaRiscoIgualTomador ?? false);
+                      const moradaRisco = (p.moradaRisco || '').toString().trim() || '-';
+                      const localidadeRisco = (p.localidadeRisco || '').toString().trim() || '-';
+                      const codigoPostalRisco = (p.codigoPostal || '').toString().trim() || '-';
+
+                      return (
+                        <div className="text-sm text-blue-800 space-y-1">
+                          <div className="font-semibold">{t('mysims:detail.simTitle')}</div>
+                          <div>{t('mysims:detail.insuranceType')}: {it.title || t('mysims:filters.types.habitacao')}</div>
+
+                          <div className="mt-2 font-semibold">{t('mysims:detail.propertyTitle')}</div>
+                          <div>{t('mysims:detail.propertyType')}: {tipoImovel}</div>
+                          <div>{t('mysims:detail.situation')}: {situacao}</div>
+                          <div>{t('mysims:detail.usage')}: {utilizacao}</div>
+                          <div>{t('mysims:detail.constructionYear')}: {p.anoConstrucao || '-'}</div>
+                          <div>{t('mysims:detail.area')}: {p.area ? `${p.area} m²` : '-'}</div>
+                          <div>{t('mysims:detail.construction')}: {construcao}</div>
+                          <div>{t('mysims:detail.security')}: {seguranca}</div>
+                          <div>{t('mysims:detail.postalCode')}: {p.codigoPostal || '-'}</div>
+                          <div>{t('mysims:detail.buildingCapital')}: {fmtMoney(p.capitalEdificio)}</div>
+                          <div>{t('mysims:detail.contentsCapital')}: {fmtMoney(p.capitalConteudo)}</div>
+                          <div>{t('mysims:detail.product')}: {produto}</div>
+                          <div>{t('mysims:detail.extras')}: {extras}</div>
+                          <div>{t('mysims:detail.details')}: {detalhes}</div>
+
+                          <div className="mt-2 font-semibold">{t('mysims:detail.holderTitle')}</div>
+                          <div>{t('mysims:detail.holderName')}: {nome}</div>
+                          <div>{t('mysims:detail.email')}: {email}</div>
+                          <div>{t('mysims:detail.phone')}: {telefone}</div>
+                          <div>{t('mysims:detail.nif')}: {nif}</div>
+
+                          {(p.moradaTomador || p.codigoPostalTomador || p.localidadeTomador) && (
+                            <>
+                              <div className="mt-2 font-semibold">{t('mysims:detail.holderAddressTitle')}</div>
+                              <div>{t('mysims:detail.addressStreet')}: {moradaTomador}</div>
+                              <div>{t('mysims:detail.addressPostalCode')}: {codigoPostalTomador}</div>
+                              <div>{t('mysims:detail.addressLocality')}: {localidadeTomador}</div>
+                            </>
+                          )}
+
+                          {(p.moradaRisco || p.localidadeRisco || p.moradaRiscoIgualTomador || p.codigoPostal) && (
+                            <>
+                              <div className="mt-2 font-semibold">{t('mysims:detail.riskAddressTitle')}</div>
+                              <div>{t('mysims:detail.riskAddressSameAsHolder')}: {moradaRiscoIgualTomador ? t('common:yes') : t('common:no')}</div>
+                              <div>{t('mysims:detail.addressStreet')}: {moradaRiscoIgualTomador ? moradaTomador : moradaRisco}</div>
+                              <div>{t('mysims:detail.addressPostalCode')}: {moradaRiscoIgualTomador ? codigoPostalTomador : codigoPostalRisco}</div>
+                              <div>{t('mysims:detail.addressLocality')}: {moradaRiscoIgualTomador ? localidadeTomador : localidadeRisco}</div>
+                            </>
+                          )}
                         </div>
                       );
                     })()
@@ -462,13 +618,13 @@ export default function MinhasSimulacoes(): React.ReactElement {
                               // Prefill with any known payload fields
                               const prefill = {
                                 holderName: (it as any)?.payload?.nome || undefined,
-                                nif: (it as any)?.payload?.nif || undefined,
+                                nif: (it as any)?.payload?.contribuinte || (it as any)?.payload?.nif || undefined,
                                 email: (it as any)?.payload?.email || undefined,
                                 phone: (it as any)?.payload?.telefone || undefined,
                                 // Prefill split address: put full morada in street field; leave others blank
-                                addressStreet: (it as any)?.payload?.morada || undefined,
-                                addressPostalCode: undefined,
-                                addressLocality: undefined,
+                                addressStreet: (it as any)?.payload?.moradaTomador || (it as any)?.payload?.morada || undefined,
+                                addressPostalCode: (it as any)?.payload?.codigoPostalTomador || undefined,
+                                addressLocality: (it as any)?.payload?.localidadeTomador || undefined,
                               };
                               setPolicyInitialBySim((prev) => ({ ...prev, [it.id]: { ...data, ...prefill } }));
                               setOpenPolicyForSimId(it.id);
@@ -485,7 +641,21 @@ export default function MinhasSimulacoes(): React.ReactElement {
                     </div>
                   )}
                   {openPolicyForSimId === it.id && uid && (
-                    <PolicyForm uid={uid} policyId={it.id} initial={policyInitialBySim[it.id]} onSaved={() => showToast('Apólice guardada com sucesso', 'success')} />
+                    <PolicyForm
+                      uid={uid}
+                      policyId={it.id}
+                      initial={policyInitialBySim[it.id]}
+                      onSaved={async () => {
+                        try {
+                          const simRef = doc(db, 'users', uid, 'simulations', it.id);
+                          await updateDoc(simRef, { policySubmitted: true, policySubmittedAt: serverTimestamp() });
+                          setItems((prev) => prev.map((s) => (s.id === it.id ? ({ ...s, policySubmitted: true } as any) : s)));
+                        } catch (e) {
+                          console.warn('[MinhasSimulacoes] Falha ao marcar simulação como aprovada pelo utilizador:', e);
+                        }
+                        showToast('Apólice guardada com sucesso', 'success');
+                      }}
+                    />
                   )}
                   {isAdmin && !hasPdf && (
                     <div className="mt-2">

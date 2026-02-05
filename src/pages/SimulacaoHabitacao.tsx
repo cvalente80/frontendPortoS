@@ -27,6 +27,15 @@ type FormState = {
   email: string;
   telefone: string;
   contribuinte: string;
+  // Morada do tomador
+  moradaTomador: string;
+  codigoPostalTomador: string;
+  localidadeTomador: string;
+
+  // Morada do risco (pode ser diferente)
+  moradaRiscoIgualTomador: boolean;
+  moradaRisco: string;
+  localidadeRisco: string;
   aceitaRgpd: boolean;
 
   // Passo 3 - Produto
@@ -57,6 +66,12 @@ export default function SimulacaoHabitacao() {
     email: "",
     telefone: "",
     contribuinte: "",
+    moradaTomador: "",
+    codigoPostalTomador: "",
+    localidadeTomador: "",
+    moradaRiscoIgualTomador: true,
+    moradaRisco: "",
+    localidadeRisco: "",
     aceitaRgpd: false,
     produto: "",
     extras: [],
@@ -111,6 +126,15 @@ export default function SimulacaoHabitacao() {
       const checked = (target as HTMLInputElement).checked;
       if (name === "aceitaRgpd") {
         setForm(prev => ({ ...prev, aceitaRgpd: checked }));
+      } else if (name === 'moradaRiscoIgualTomador') {
+        setForm((prev) => {
+          const next = { ...prev, moradaRiscoIgualTomador: checked };
+          if (checked) {
+            next.moradaRisco = prev.moradaTomador;
+            next.localidadeRisco = prev.localidadeTomador;
+          }
+          return next;
+        });
       } else if (name === "seguranca" || name === "extras") {
         const group = name as "seguranca" | "extras";
         setForm(prev => {
@@ -120,7 +144,21 @@ export default function SimulacaoHabitacao() {
         });
       }
     } else {
-      if (name === 'produto') {
+      if (name === 'moradaTomador' || name === 'localidadeTomador') {
+        setForm((prev) => {
+          const next = { ...prev, [name]: value } as FormState;
+          if (prev.moradaRiscoIgualTomador) {
+            if (name === 'moradaTomador') next.moradaRisco = value;
+            if (name === 'localidadeTomador') next.localidadeRisco = value;
+          }
+          return next;
+        });
+      } else if (name === 'codigoPostalTomador') {
+        let v = value.replace(/\D/g, "");
+        if (v.length > 4) v = v.slice(0, 4) + '-' + v.slice(4, 7);
+        if (v.length > 8) v = v.slice(0, 8);
+        setForm((prev) => ({ ...prev, codigoPostalTomador: v }));
+      } else if (name === 'produto') {
         setForm(prev => {
           const next: FormState = { ...prev, produto: value as FormState['produto'] };
           if (value === 'completo' && next.extras.includes('sismo')) {
@@ -184,6 +222,25 @@ export default function SimulacaoHabitacao() {
     if (!form.email || !emailRegex.test(form.email)) { setMensagem(t('sim_home:messages.emailInvalid')); setMensagemTipo("erro"); return false; }
   if (!/^[0-9]{9}$/.test(form.telefone)) { setMensagem(t('sim_home:messages.phoneInvalid')); setMensagemTipo("erro"); return false; }
   if (!/^[0-9]{9}$/.test(form.contribuinte)) { setMensagem(t('sim_home:messages.nifInvalid')); setMensagemTipo("erro"); return false; }
+
+    if (!form.moradaTomador?.trim() || !form.codigoPostalTomador || !form.localidadeTomador?.trim()) {
+      setMensagem(t('sim_home:messages.addressHolderRequired'));
+      setMensagemTipo('erro');
+      return false;
+    }
+    if (!/^[0-9]{4}-[0-9]{3}$/.test(form.codigoPostalTomador)) {
+      setMensagem(t('sim_home:messages.postalInvalid'));
+      setMensagemTipo('erro');
+      return false;
+    }
+    // Risk address can be same as holder
+    if (!form.moradaRiscoIgualTomador) {
+      if (!form.moradaRisco?.trim() || !form.localidadeRisco?.trim()) {
+        setMensagem(t('sim_home:messages.addressRiskRequired'));
+        setMensagemTipo('erro');
+        return false;
+      }
+    }
     setMensagem(null); setMensagemTipo(null);
     return true;
   }
@@ -228,10 +285,21 @@ export default function SimulacaoHabitacao() {
 `Imóvel: ${form.tipoImovel} | Situação: ${form.situacao} | Utilização: ${form.utilizacao}
 Ano: ${form.anoConstrucao} | Área: ${form.area} m²
 Construção: ${form.construcao} | Segurança: ${form.seguranca.join(', ') || 'Nenhuma'}
-CP: ${form.codigoPostal} | Capitais -> Edifício: ${form.situacao==='proprietario'?form.capitalEdificio+' €':'n/a'} | Conteúdo: ${form.capitalConteudo} €
+Morada risco: ${form.moradaRiscoIgualTomador ? 'Igual ao tomador' : (form.moradaRisco || '-')}, ${form.codigoPostal} ${form.localidadeRisco || '-'}
+Morada tomador: ${form.moradaTomador || '-'}, ${form.codigoPostalTomador || '-'} ${form.localidadeTomador || '-'}
+Capitais -> Edifício: ${form.situacao==='proprietario'?form.capitalEdificio+' €':'n/a'} | Conteúdo: ${form.capitalConteudo} €
 Produto: ${produtoLabel} | Extras: ${extrasLabel || 'Nenhum'}
 Detalhes: ${form.detalhes?.trim() ? form.detalhes?.trim() : '-'}
 Cliente: ${form.nome} | Email: ${form.email} | Tel: ${form.telefone} | NIF: ${form.contribuinte}`;
+
+    const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+    let dominioDetails = 'Ansião Seguros';
+    if (host.includes('aurelio')) dominioDetails = 'Aurélio Seguros';
+    else if (host.includes('sintraseg') || host.includes('sintra')) dominioDetails = 'Sintra Seguros';
+    else if (host.includes('pombalseg') || host.includes('pombal')) dominioDetails = 'Pombal Seguros';
+    else if (host.includes('povoaseg') || host.includes('povoa')) dominioDetails = 'Póvoa Seguros';
+    else if (host.includes('lisboaseg') || host.includes('lisboa')) dominioDetails = 'Lisboa Seguros';
+    else if (host.includes('portoseg') || host.includes('porto')) dominioDetails = 'Porto Seguros';
 
     const templateParams = {
       // Identificação
@@ -239,17 +307,25 @@ Cliente: ${form.nome} | Email: ${form.email} | Tel: ${form.telefone} | NIF: ${fo
       email: form.email,
       telefone: telefoneFormatado,
       nif: form.contribuinte,
+      DominioDetails: dominioDetails,
       // Dados do risco
       situacao: form.situacao,
       tipo_imovel: form.tipoImovel,
       utilizacao: form.utilizacao,
       ano_construcao: form.anoConstrucao,
       area_m2: form.area,
+      morada_risco: form.moradaRiscoIgualTomador ? form.moradaTomador : form.moradaRisco,
       codigo_postal: form.codigoPostal,
+      localidade_risco: form.moradaRiscoIgualTomador ? form.localidadeTomador : form.localidadeRisco,
+      risco_igual_tomador: form.moradaRiscoIgualTomador ? 'sim' : 'nao',
       construcao: form.construcao,
       seguranca: segurancaLista,
       capital_edificio: form.situacao==='proprietario' && form.capitalEdificio ? form.capitalEdificio : 'n/a',
       capital_conteudo: form.capitalConteudo || 'n/a',
+      // Dados tomador
+      morada_tomador: form.moradaTomador,
+      codigo_postal_tomador: form.codigoPostalTomador,
+      localidade_tomador: form.localidadeTomador,
       // Produto e coberturas
       produto: produtoLabel,
       extras: extrasLabel || 'Nenhum',
@@ -309,6 +385,12 @@ Cliente: ${form.nome} | Email: ${form.email} | Tel: ${form.telefone} | NIF: ${fo
         email: "",
         telefone: "",
         contribuinte: "",
+        moradaTomador: "",
+        codigoPostalTomador: "",
+        localidadeTomador: "",
+        moradaRiscoIgualTomador: true,
+        moradaRisco: "",
+        localidadeRisco: "",
         aceitaRgpd: false,
         produto: "",
         extras: [],
@@ -359,6 +441,12 @@ Cliente: ${form.nome} | Email: ${form.email} | Tel: ${form.telefone} | NIF: ${fo
           email: "",
           telefone: "",
           contribuinte: "",
+          moradaTomador: "",
+          codigoPostalTomador: "",
+          localidadeTomador: "",
+          moradaRiscoIgualTomador: true,
+          moradaRisco: "",
+          localidadeRisco: "",
           aceitaRgpd: false,
           produto: "",
           extras: [],
@@ -576,6 +664,111 @@ Cliente: ${form.nome} | Email: ${form.email} | Tel: ${form.telefone} | NIF: ${fo
                     onInput={e=>setCustomValidity(e,'')}
                   />
                 </div>
+
+                <div className="md:col-span-2 mt-2">
+                  <div className="text-sm font-semibold text-blue-900 mb-2">{t('sim_home:labels.addressHolderTitle')}</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold mb-1">{t('sim_home:labels.addressStreet')}</label>
+                      <input
+                        name="moradaTomador"
+                        value={form.moradaTomador}
+                        onChange={handleChange}
+                        placeholder={t('sim_home:placeholders.addressStreet')}
+                        className="w-full p-3 border rounded"
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-1">{t('sim_home:labels.addressPostalCode')}</label>
+                      <input
+                        name="codigoPostalTomador"
+                        value={form.codigoPostalTomador}
+                        onChange={handleChange}
+                        placeholder={t('sim_home:placeholders.postal')}
+                        className="w-full p-3 border rounded"
+                        required
+                        maxLength={8}
+                        pattern="^[0-9]{4}-[0-9]{3}$"
+                        onInvalid={e=>setCustomValidity(e,t('sim_home:messages.postalInvalid'))}
+                        onInput={e=>setCustomValidity(e,'')}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold mb-1">{t('sim_home:labels.addressLocality')}</label>
+                      <input
+                        name="localidadeTomador"
+                        value={form.localidadeTomador}
+                        onChange={handleChange}
+                        placeholder={t('sim_home:placeholders.addressLocality')}
+                        className="w-full p-3 border rounded"
+                        required
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="inline-flex items-center gap-2 text-sm text-blue-900">
+                    <input
+                      type="checkbox"
+                      name="moradaRiscoIgualTomador"
+                      checked={form.moradaRiscoIgualTomador}
+                      onChange={handleChange}
+                    />
+                    {t('sim_home:labels.riskAddressSameAsHolder')}
+                  </label>
+                </div>
+
+                {!form.moradaRiscoIgualTomador && (
+                  <div className="md:col-span-2">
+                    <div className="text-sm font-semibold text-blue-900 mb-2">{t('sim_home:labels.addressRiskTitle')}</div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="block text-sm font-semibold mb-1">{t('sim_home:labels.addressStreet')}</label>
+                        <input
+                          name="moradaRisco"
+                          value={form.moradaRisco}
+                          onChange={handleChange}
+                          placeholder={t('sim_home:placeholders.addressStreet')}
+                          className="w-full p-3 border rounded"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold mb-1">{t('sim_home:labels.codigoPostal')}</label>
+                        <input
+                          name="codigoPostal"
+                          value={form.codigoPostal}
+                          onChange={e=>{
+                            let v = e.target.value.replace(/\D/g,"");
+                            if (v.length > 4) v = v.slice(0,4)+'-'+v.slice(4,7);
+                            if (v.length > 8) v = v.slice(0,8);
+                            setForm(prev=>({ ...prev, codigoPostal: v }));
+                          }}
+                          placeholder={t('sim_home:placeholders.postal')}
+                          className="w-full p-3 border rounded"
+                          required
+                          maxLength={8}
+                          pattern="^[0-9]{4}-[0-9]{3}$"
+                          onInvalid={e=>setCustomValidity(e,t('sim_home:messages.postalInvalid'))}
+                          onInput={e=>setCustomValidity(e,'')}
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold mb-1">{t('sim_home:labels.addressLocality')}</label>
+                        <input
+                          name="localidadeRisco"
+                          value={form.localidadeRisco}
+                          onChange={handleChange}
+                          placeholder={t('sim_home:placeholders.addressLocality')}
+                          className="w-full p-3 border rounded"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
               <div className="flex justify-between gap-2">
                 <button type="button" onClick={handlePrev} className="px-6 py-2 bg-gray-200 rounded">{t('sim_home:buttons.prev')}</button>
