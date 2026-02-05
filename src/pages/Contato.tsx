@@ -34,11 +34,19 @@ export default function Contato() {
   const { lang } = useParams();
   const base = lang === 'en' ? 'en' : 'pt';
   const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+  const isAurelio = host.includes('aurelio');
   const isSintra = host.includes('sintraseg') || host.includes('sintra');
   const isPombal = host.includes('pombalseg') || host.includes('pombal');
   const isPovoa = host.includes('povoaseg') || host.includes('povoa');
   const isLisboa = host.includes('lisboaseg') || host.includes('lisboa');
   const isPorto = host.includes('portoseg') || host.includes('porto');
+
+  const primaryPhone = isAurelio
+    ? { label: 'Aurélio', tel: '+351936677352', display: '+351 936 677 352' }
+    : { label: 'Carlos', tel: '+351962116764', display: '+351 962 116 764' };
+  const secondaryPhone = isAurelio
+    ? { label: 'Carlos', tel: '+351962116764', display: '+351 962 116 764' }
+    : null;
   const mapQuery = isLisboa
     ? 'Lisboa, Portugal'
     : isPovoa
@@ -242,16 +250,27 @@ export default function Contato() {
             <div className="flex items-center gap-3">
               <div className="text-blue-900 font-medium">
                 <span className="sr-only">{t('phoneNumberLabel')}</span>
-                <a
-                  href={`tel:+351962116764`}
-                  className="text-2xl font-bold tracking-wide hover:underline whitespace-nowrap"
-                  title={t('callNowCta') as string}
-                >
-                  +351 962 116 764
-                </a>
+                <div className="flex flex-col">
+                  <a
+                    href={`tel:${primaryPhone.tel}`}
+                    className="text-2xl font-bold tracking-wide hover:underline whitespace-nowrap"
+                    title={t('callNowCta') as string}
+                  >
+                    {isAurelio ? `${primaryPhone.label}: ${primaryPhone.display}` : primaryPhone.display}
+                  </a>
+                  {secondaryPhone && (
+                    <a
+                      href={`tel:${secondaryPhone.tel}`}
+                      className="text-sm text-blue-800 hover:underline whitespace-nowrap"
+                      title={t('callNowCta') as string}
+                    >
+                      {secondaryPhone.label}: {secondaryPhone.display}
+                    </a>
+                  )}
+                </div>
               </div>
               <a
-                href={`tel:+351962116764`}
+                href={`tel:${primaryPhone.tel}`}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold shadow hover:bg-blue-500"
                 aria-label={t('callNowCta')}
               >
