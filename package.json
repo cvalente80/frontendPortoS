@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build --mode devlocal && cp -f dist/index.html dist/404.html",
-    "build:gh": "vite build --mode gh && cp -f dist/index.html dist/404.html",
+    "build": "vite build --mode devlocal && node scripts/prerender-kristina-og.mjs && cp -f dist/index.html dist/404.html",
+    "build:gh": "vite build --mode gh && node scripts/prerender-kristina-og.mjs && cp -f dist/index.html dist/404.html",
     "lint": "eslint .",
     "preview": "vite preview",
     "test:rules": "node tests/chat-rules-test.mjs"

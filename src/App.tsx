@@ -9,6 +9,8 @@ import SimulacaoAuto from "./pages/SimulacaoAuto";
 import SimulacaoVida from "./pages/SimulacaoVida";
 import SimulacaoSaude from "./pages/SimulacaoSaude";
 import SimulacaoHabitacao from "./pages/SimulacaoHabitacao";
+import LandingKristina from "./pages/LandingKristina";
+import LandingKristinaGuia from "./pages/LandingKristinaGuia";
 import Produtos from "./pages/Produtos";
 import Contato from "./pages/Contato";
 import ProdutoAuto from "./pages/ProdutoAuto";
@@ -113,6 +115,12 @@ function App(): React.ReactElement {
           <Route path="simulacao-vida" element={<SimulacaoVida />} />
           <Route path="simulacao-saude" element={<SimulacaoSaude />} />
           <Route path="simulacao-habitacao" element={<SimulacaoHabitacao />} />
+          {/* Campaign landing pages (shareable URLs) */}
+          <Route path="kristin" element={<LandingKristina />} />
+          <Route path="kristin-guia" element={<LandingKristinaGuia />} />
+          {/* Backwards-compatible redirects */}
+          <Route path="kristina" element={<Navigate to={`/${base}/kristin`} replace />} />
+          <Route path="kristina-guia" element={<Navigate to={`/${base}/kristin-guia`} replace />} />
           <Route path="produtos" element={<Produtos />} />
           <Route path="contato" element={<Contato />} />
           <Route path="produto-auto" element={<ProdutoAuto />} />
