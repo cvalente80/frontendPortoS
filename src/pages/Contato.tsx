@@ -256,7 +256,7 @@ export default function Contato() {
                     className="text-2xl font-bold tracking-wide hover:underline whitespace-nowrap"
                     title={t('callNowCta') as string}
                   >
-                    {isAurelio ? `${primaryPhone.label}: ${primaryPhone.display}` : primaryPhone.display}
+                    {isAurelio ? `${primaryPhone.label}: ${primaryPhone.display}` : `${primaryPhone.display} - Carlos Valente`}
                   </a>
                   {secondaryPhone && (
                     <a
