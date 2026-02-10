@@ -193,7 +193,15 @@ export default function SimulacaoAuto() {
       }, 6000);
       return;
     }
-  const resumo = `${t('summary.title')} ${form.marca} ${form.modelo}${form.versao ? ' ' + form.versao : ''} (${form.ano}) - ${form.tipoSeguro}\n${t('summary.labels.nif')} ${form.contribuinte}\n${t('summary.labels.birthDate')} ${form.dataNascimento ? formatDate(form.dataNascimento) : '-'}\n${t('summary.labels.licenseDate')} ${form.dataCartaConducao ? formatDate(form.dataCartaConducao) : '-'}\n${t('summary.labels.postalCode')} ${form.codigoPostal || '-'}\n${t('summary.labels.version')} ${form.versao?.trim() ? form.versao.trim() : '-'}\n${t('summary.labels.coverages')} ${form.coberturas.join(", ")}\n${t('summary.labels.otherRequests')} ${form.outrosPedidos?.trim() ? form.outrosPedidos.trim() : '-'}`;
+    const baseCovers =
+      form.tipoSeguro === t('typeThirdParty')
+        ? ((t('baseCoversThirdParty', { returnObjects: true }) as unknown) as string[])
+        : form.tipoSeguro === t('typeOwnDamage')
+          ? ((t('baseCoversOwnDamage', { returnObjects: true }) as unknown) as string[])
+          : [];
+    const coveragesForSubmit = Array.from(new Set([...(baseCovers || []), ...(form.coberturas || [])]));
+
+  const resumo = `${t('summary.title')} ${form.marca} ${form.modelo}${form.versao ? ' ' + form.versao : ''} (${form.ano}) - ${form.tipoSeguro}\n${t('summary.labels.nif')} ${form.contribuinte}\n${t('summary.labels.birthDate')} ${form.dataNascimento ? formatDate(form.dataNascimento) : '-'}\n${t('summary.labels.licenseDate')} ${form.dataCartaConducao ? formatDate(form.dataCartaConducao) : '-'}\n${t('summary.labels.postalCode')} ${form.codigoPostal || '-'}\n${t('summary.labels.version')} ${form.versao?.trim() ? form.versao.trim() : '-'}\n${t('summary.labels.coverages')} ${coveragesForSubmit.join(", ")}\n${t('summary.labels.otherRequests')} ${form.outrosPedidos?.trim() ? form.outrosPedidos.trim() : '-'}`;
     setResultado(resumo);
 
     // Enviar email via EmailJS
@@ -210,7 +218,7 @@ export default function SimulacaoAuto() {
       ano: form.ano,
       matricula: form.matricula,
       tipoSeguro: form.tipoSeguro,
-      coberturas: form.coberturas.join(", "),
+      coberturas: coveragesForSubmit.join(", "),
       outrosPedidos: form.outrosPedidos?.trim() ? form.outrosPedidos.trim() : '-',
       resultado: resumo,
       // Usado no template EmailJS como {{siteURL}} Seguros
@@ -247,7 +255,7 @@ export default function SimulacaoAuto() {
               ano: form.ano,
               matricula: form.matricula,
               tipoSeguro: form.tipoSeguro,
-              coberturas: form.coberturas,
+              coberturas: coveragesForSubmit,
               outrosPedidos: form.outrosPedidos,
             }
           }, { idempotencyKey: key });

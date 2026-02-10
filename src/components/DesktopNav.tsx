@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { NavLink, useParams } from 'react-router-dom';
+import { NavLink, useLocation, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
 import { useAuth } from '../context/AuthContext';
@@ -7,12 +7,15 @@ import { useAuthUX } from '../context/AuthUXContext';
 
 export function DesktopNav() {
   const { t } = useTranslation('common');
+  const location = useLocation();
   const { lang } = useParams();
   const base = lang === 'en' ? 'en' : 'pt';
   const { user, loading, displayName, loginWithGoogle, logout, isAdmin } = useAuth();
   const { openAuth } = useAuthUX();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [updatesOpen, setUpdatesOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement | null>(null);
+  const updatesRef = useRef<HTMLDivElement | null>(null);
   const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
   let brandName = 'Ansião Seguros';
   if (host.includes('aurelio')) brandName = 'Aurélio Seguros';
@@ -22,18 +25,25 @@ export function DesktopNav() {
   else if (host.includes('lisboaseg') || host.includes('lisboa')) brandName = 'Lisboa Seguros';
   else if (host.includes('portoseg') || host.includes('porto')) brandName = 'Porto Seguros';
 
-  // Close profile menu on outside click or Escape cvalente eduardo
+  // Close menus on outside click or Escape
   useEffect(() => {
     function onDocPointer(e: MouseEvent | TouchEvent) {
-      if (!profileOpen) return;
-      const el = profileRef.current;
-      if (el && e.target instanceof Node && !el.contains(e.target)) {
-        setProfileOpen(false);
-      }
+      if (!(profileOpen || updatesOpen)) return;
+      const targetIsNode = e.target instanceof Node;
+      if (!targetIsNode) return;
+
+      const profileEl = profileRef.current;
+      if (profileOpen && profileEl && !profileEl.contains(e.target)) setProfileOpen(false);
+
+      const updatesEl = updatesRef.current;
+      if (updatesOpen && updatesEl && !updatesEl.contains(e.target)) setUpdatesOpen(false);
     }
     function onKey(e: KeyboardEvent) {
-      if (!profileOpen) return;
-      if (e.key === 'Escape') setProfileOpen(false);
+      if (!(profileOpen || updatesOpen)) return;
+      if (e.key === 'Escape') {
+        setProfileOpen(false);
+        setUpdatesOpen(false);
+      }
     }
     document.addEventListener('mousedown', onDocPointer, true);
     document.addEventListener('touchstart', onDocPointer, true);
@@ -43,7 +53,7 @@ export function DesktopNav() {
       document.removeEventListener('touchstart', onDocPointer, true);
       document.removeEventListener('keydown', onKey, true);
     };
-  }, [profileOpen]);
+  }, [profileOpen, updatesOpen]);
   function resetFloatingWidgets() {
     try {
       localStorage.removeItem('chat:hideWhatsApp');
@@ -52,14 +62,16 @@ export function DesktopNav() {
     window.dispatchEvent(new CustomEvent('chat:resetFloating'));
   }
   return (
-    <nav className="bg-white py-4 px-8 flex justify-between items-center sticky top-0 z-50 shadow-sm">
-      <NavLink to={`/${base}`} className="flex items-center gap-2 shrink-0" onClick={resetFloatingWidgets}>
-        <img src={`${import.meta.env.BASE_URL}logo-empresarial.svg`} alt="Logo Ansião Seguros" className="h-10 w-10 xl:h-12 xl:w-12" />
-  <span className="text-2xl xl:text-3xl font-bold text-blue-900 hover:text-blue-700 whitespace-nowrap">{brandName}</span>
-      </NavLink>
-      <div className="hidden md:flex items-center gap-4 xl:gap-6 text-blue-700 font-medium text-sm xl:text-base">
-        {/* Dropdown Simulador */}
-        <div className="relative group">
+    <nav className="bg-white sticky top-0 z-50 shadow-sm">
+      <div className="py-4 px-8 flex justify-between items-center">
+        <NavLink to={`/${base}`} className="flex items-center gap-2 shrink-0" onClick={resetFloatingWidgets}>
+          <img src={`${import.meta.env.BASE_URL}logo-empresarial.svg`} alt="Logo Ansião Seguros" className="h-10 w-10 xl:h-12 xl:w-12" />
+          <span className="text-2xl xl:text-3xl font-bold text-blue-900 hover:text-blue-700 whitespace-nowrap">{brandName}</span>
+        </NavLink>
+        <div className="hidden md:flex flex-col items-start gap-2">
+        <div className="flex items-center gap-4 xl:gap-6 text-blue-700 font-medium text-sm xl:text-base">
+          {/* Dropdown Simulador */}
+          <div className="relative group">
           <button className="whitespace-nowrap hover:text-blue-900 inline-flex items-center gap-1 focus:outline-none" aria-haspopup="true">
             {t('nav.simulator')}
             <svg className="w-4 h-4 text-current" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
@@ -119,47 +131,56 @@ export function DesktopNav() {
           </div>
         </div>
         <NavLink to={`/${base}/produtos`} className={({ isActive }) => (isActive ? "border-b-2 border-blue-900 text-blue-900 font-bold" : "hover:text-blue-900") + " whitespace-nowrap"}>{t('nav.products')}</NavLink>
-        <NavLink to={`/${base}/agenda`} className={({ isActive }) => (isActive ? "border-b-2 border-blue-900 text-blue-900 font-bold" : "hover:text-blue-900") + " whitespace-nowrap"}>{t('nav.agenda')}</NavLink>
-        <NavLink to={`/${base}/noticias`} className={({ isActive }) => (isActive ? "border-b-2 border-blue-900 text-blue-900 font-bold" : "hover:text-blue-900") + " whitespace-nowrap"}>{t('nav.news')}</NavLink>
+        {/* Dropdown Atualidade (Agenda + Notícias) */}
+        <div className="relative" ref={updatesRef}>
+          <button
+            type="button"
+            aria-haspopup="menu"
+            aria-expanded={updatesOpen}
+            onClick={() => setUpdatesOpen((v) => !v)}
+            className={
+              ((location.pathname.includes('/agenda') || location.pathname.includes('/noticias'))
+                ? 'border-b-2 border-blue-900 text-blue-900 font-bold'
+                : 'hover:text-blue-900') +
+              ' whitespace-nowrap inline-flex items-center gap-1 focus:outline-none'
+            }
+          >
+            {t('nav.updates')}
+            <svg className="w-4 h-4 text-current" viewBox="0 0 20 20" fill="currentColor" aria-hidden>
+              <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd" />
+            </svg>
+          </button>
+          <div
+            role="menu"
+            aria-hidden={!updatesOpen}
+            className={
+              `absolute left-0 top-full mt-2 w-44 rounded-lg border border-gray-200 bg-white shadow-lg transition duration-150 ease-out p-2 z-50 ` +
+              (updatesOpen ? 'opacity-100 scale-100 translate-y-0' : 'opacity-0 scale-95 -translate-y-1 pointer-events-none')
+            }
+          >
+            <div className="flex flex-col text-blue-800">
+              <NavLink
+                to={`/${base}/noticias`}
+                onClick={() => setUpdatesOpen(false)}
+                className={({ isActive }) =>
+                  (isActive ? "bg-blue-50 text-blue-900 font-semibold" : "hover:bg-gray-50 hover:text-blue-900") + " rounded px-3 py-2"
+                }
+              >
+                {t('nav.news')}
+              </NavLink>
+              <NavLink
+                to={`/${base}/agenda`}
+                onClick={() => setUpdatesOpen(false)}
+                className={({ isActive }) =>
+                  (isActive ? "bg-blue-50 text-blue-900 font-semibold" : "hover:bg-gray-50 hover:text-blue-900") + " rounded px-3 py-2"
+                }
+              >
+                {t('nav.agenda')}
+              </NavLink>
+            </div>
+          </div>
+        </div>
         <NavLink to={`/${base}/contato`} className={({ isActive }) => (isActive ? "border-b-2 border-blue-900 text-blue-900 font-bold" : "hover:text-blue-900") + " whitespace-nowrap"}>{t('nav.contact')}</NavLink>
-        {/* Admin inbox link removed from main nav; available under profile menu */}
-        {user && (
-          <NavLink
-            to={`/${base}/minhas-simulacoes`}
-            className={({ isActive }) =>
-              (isActive
-                ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                : "bg-blue-50 text-blue-900 border-blue-200 hover:bg-blue-100") +
-              " whitespace-nowrap inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors"
-            }
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
-              <path d="M9 3h6v4H9z"/>
-              <path d="M9 12h6"/>
-              <path d="M9 16h6"/>
-            </svg>
-            {t('nav.mySimulations')}
-          </NavLink>
-        )}
-        {/* Admin inbox pill removed from top navigation */}
-        {user && (
-          <NavLink
-            to={`/${base}/minhas-apolices`}
-            className={({ isActive }) =>
-              (isActive
-                ? "bg-blue-600 text-white border-blue-600 shadow-sm"
-                : "bg-blue-50 text-blue-900 border-blue-200 hover:bg-blue-100") +
-              " whitespace-nowrap inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors"
-            }
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              <path d="M9.5 12.5l1.5 1.5 3.5-3.5"/>
-            </svg>
-            {t('nav.myPolicies')}
-          </NavLink>
-        )}
         <LanguageSwitcher />
 
         {/* Perfil / Autenticação */}
@@ -232,6 +253,47 @@ export function DesktopNav() {
             <span className="hidden xl:inline">{t('auth.loginCta')}</span>
           </button>
         )}
+        </div>
+
+        {/* Segunda linha (user logado): Simulações e Apólices (alinhado com o início do menu) */}
+        {user && (
+          <div className="flex items-center justify-start gap-3">
+            <NavLink
+              to={`/${base}/minhas-simulacoes`}
+              className={({ isActive }) =>
+                (isActive
+                  ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                  : "bg-blue-50 text-blue-900 border-blue-200 hover:bg-blue-100") +
+                " whitespace-nowrap inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors"
+              }
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+                <path d="M9 3h6v4H9z"/>
+                <path d="M9 12h6"/>
+                <path d="M9 16h6"/>
+              </svg>
+              {t('nav.mySimulations')}
+            </NavLink>
+
+            <NavLink
+              to={`/${base}/minhas-apolices`}
+              className={({ isActive }) =>
+                (isActive
+                  ? "bg-blue-600 text-white border-blue-600 shadow-sm"
+                  : "bg-blue-50 text-blue-900 border-blue-200 hover:bg-blue-100") +
+                " whitespace-nowrap inline-flex items-center gap-2 rounded-full border px-3 py-1.5 transition-colors"
+              }
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <path d="M9.5 12.5l1.5 1.5 3.5-3.5"/>
+              </svg>
+              {t('nav.myPolicies')}
+            </NavLink>
+          </div>
+        )}
+        </div>
       </div>
     </nav>
   );
