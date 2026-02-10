@@ -23,6 +23,7 @@ const resources = {
         businessFleet: 'Frota (informação/produto)',
         businessWork: 'Acidentes de Trabalho (produto)',
         products: 'Produtos',
+        updates: 'Atualidade',
         agenda: 'Agenda',
         news: 'Notícias',
         contact: 'Contacto',
@@ -553,7 +554,7 @@ const resources = {
       baseCoverLabel: 'Coberturas base:',
       additionalCoverages: 'Coberturas adicionais:',
       baseCoversThirdParty: ['Responsabilidade civil', 'Proteção jurídica'],
-      baseCoversOwnDamage: ['Choque, colisão e capotamento', 'Furto ou roubo', 'Incêndio'],
+      baseCoversOwnDamage: ['Choque, colisão e capotamento', 'Furto ou roubo', 'Incêndio', 'Vidros', 'Ocupantes', 'Assistência em viagem'],
       coverageLabels: {
         occupants: 'Ocupantes',
         glass: 'Vidros',
@@ -1183,6 +1184,7 @@ const resources = {
         businessMreb: 'Business Multi-risk (info)',
         businessFleet: 'Fleet (info)',
         businessWork: 'Workers’ Compensation (info)',
+        updates: 'Updates',
         products: 'Products',
         agenda: 'Agenda',
         news: 'News',
@@ -1701,7 +1703,7 @@ const resources = {
       baseCoverLabel: 'Core cover:',
       additionalCoverages: 'Additional cover:',
       baseCoversThirdParty: ['Third party liability', 'Legal expenses'],
-      baseCoversOwnDamage: ['Accidental damage', 'Theft', 'Fire'],
+      baseCoversOwnDamage: ['Accidental damage', 'Theft', 'Fire', 'Windscreen cover', 'Personal accident (occupants)', 'Roadside assistance'],
       coverageLabels: {
         occupants: 'Personal accident (occupants)',
         glass: 'Windscreen cover',

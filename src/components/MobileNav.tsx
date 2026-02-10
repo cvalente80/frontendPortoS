@@ -158,8 +158,21 @@ export default function MobileNav() {
               </details>
             </li>
             <li><NavLink to={`/${base}/produtos`} onClick={() => setOpen(false)} className={({ isActive }) => isActive ? "font-bold text-blue-900" : "hover:text-blue-900"}>{t('nav.products')}</NavLink></li>
-            <li><NavLink to={`/${base}/agenda`} onClick={() => setOpen(false)} className={({ isActive }) => isActive ? "font-bold text-blue-900" : "hover:text-blue-900"}>{t('nav.agenda')}</NavLink></li>
-            <li><NavLink to={`/${base}/noticias`} onClick={() => setOpen(false)} className={({ isActive }) => isActive ? "font-bold text-blue-900" : "hover:text-blue-900"}>{t('nav.news')}</NavLink></li>
+            {/* Atualidade (Agenda + Notícias) */}
+            <li>
+              <details className="group">
+                <summary className="cursor-pointer select-none flex items-center justify-center gap-2">
+                  {t('nav.updates')}
+                  <svg className="w-4 h-4 transition-transform group-open:rotate-180" viewBox="0 0 20 20" fill="currentColor"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.21 8.29a.75.75 0 01.02-1.08z" clipRule="evenodd"/></svg>
+                </summary>
+                <div className="mt-2 ml-3">
+                  <ul className="flex flex-col gap-2">
+                    <li><NavLink to={`/${base}/noticias`} onClick={() => setOpen(false)} className={({ isActive }) => isActive ? "font-bold text-blue-900" : "hover:text-blue-900"}>{t('nav.news')}</NavLink></li>
+                    <li><NavLink to={`/${base}/agenda`} onClick={() => setOpen(false)} className={({ isActive }) => isActive ? "font-bold text-blue-900" : "hover:text-blue-900"}>{t('nav.agenda')}</NavLink></li>
+                  </ul>
+                </div>
+              </details>
+            </li>
             <li><NavLink to={`/${base}/contato`} onClick={() => setOpen(false)} className={({ isActive }) => isActive ? "font-bold text-blue-900" : "hover:text-blue-900"}>{t('nav.contact')}</NavLink></li>
             {/* Admin links for administrators */}
             {user && isAdmin && (
