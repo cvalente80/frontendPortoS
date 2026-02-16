@@ -41,6 +41,22 @@ export default function Contato() {
   const isLisboa = host.includes('lisboaseg') || host.includes('lisboa');
   const isPorto = host.includes('portoseg') || host.includes('porto');
 
+  const brandName = isAurelio
+    ? 'Aurélio Seguros'
+    : isSintra
+      ? 'Sintra Seguros'
+      : isPombal
+        ? 'Pombal Seguros'
+        : isPovoa
+          ? 'Póvoa Seguros'
+          : isLisboa
+            ? 'Lisboa Seguros'
+            : isPorto
+              ? 'Porto Seguros'
+              : 'Ansião Seguros';
+  const siteDomain = typeof window !== 'undefined' ? window.location.hostname : '';
+  const siteUrl = typeof window !== 'undefined' ? window.location.origin : '';
+
   const primaryPhone = isAurelio
     ? { label: 'Aurélio', tel: '+351936677352', display: '+351 936 677 352' }
     : { label: 'Carlos', tel: '+351962116764', display: '+351 962 116 764' };
@@ -140,6 +156,9 @@ export default function Contato() {
       nome: form.nome,
       email: form.email,
       telefone: form.telefone || '',
+      brand: brandName,
+      site_domain: siteDomain,
+      site_url: siteUrl,
       tipoSeguro,
       subjectEmail,
       resultado: resumo,
