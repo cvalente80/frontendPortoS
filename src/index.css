@@ -1,3 +1,72 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+	html, body, #root {
+		height: 100%;
+	}
+
+	body {
+		@apply bg-slate-50 text-slate-900 antialiased;
+	}
+
+	:focus-visible {
+		@apply outline-none ring-2 ring-blue-500 ring-offset-2 ring-offset-white;
+	}
+
+	::selection {
+		@apply bg-blue-100;
+	}
+}
+
+@layer components {
+	.as-card {
+		@apply rounded-2xl bg-white/80 backdrop-blur border border-white/60 shadow-sm;
+	}
+
+	.as-input,
+	.as-select,
+	.as-textarea {
+		@apply w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-slate-900 placeholder:text-slate-400 shadow-sm;
+		@apply focus:border-blue-300 focus:ring-2 focus:ring-blue-200;
+		@apply transition-colors;
+	}
+
+	.as-select {
+		@apply pr-10;
+	}
+
+	.as-textarea {
+		@apply min-h-[140px] resize-y;
+	}
+
+	.as-checkbox {
+		@apply h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-200;
+	}
+
+	.as-btn {
+		@apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 font-semibold;
+		@apply transition-all duration-200;
+		@apply focus-visible:ring-2 focus-visible:ring-blue-500;
+		@apply disabled:opacity-60 disabled:cursor-not-allowed;
+	}
+
+	.as-btn-primary {
+		@apply as-btn bg-blue-700 text-white shadow-sm hover:bg-blue-800 active:scale-[0.99];
+	}
+
+	.as-btn-soft {
+		@apply as-btn bg-blue-50 text-blue-900 border border-blue-200 hover:bg-blue-100;
+	}
+
+	.as-alert {
+		@apply rounded-xl px-4 py-3 text-sm;
+	}
+	.as-alert-success {
+		@apply as-alert bg-green-50 text-green-800 border border-green-200;
+	}
+	.as-alert-error {
+		@apply as-alert bg-red-50 text-red-800 border border-red-200;
+	}
+}

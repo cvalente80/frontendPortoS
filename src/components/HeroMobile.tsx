@@ -17,10 +17,10 @@ export default function HeroMobile() {
         <h1 className="text-3xl font-extrabold mb-3 text-white drop-shadow">{t('heroSlides.0.title')}</h1>
         <p className="text-base mb-4 text-white/90">{t('heroSlides.0.text')}</p>
         <div className="flex items-center justify-center gap-3">
-          <Link to={`/${base}/simulacao-auto`} className="px-4 py-3 bg-yellow-400 text-blue-900 font-bold rounded-full shadow-lg hover:bg-yellow-300 transition">
+          <Link to={`/${base}/simulacao-auto`} className="px-4 py-3 bg-yellow-400 text-blue-900 font-bold rounded-full shadow-lg hover:bg-yellow-300 transition-all duration-200 active:scale-[0.99]">
             {t('heroSlides.0.cta')}
           </Link>
-          <Link to={`/${base}/produtos`} className="px-4 py-3 bg-white/90 text-blue-900 font-bold rounded-full shadow-lg hover:bg-white transition">
+          <Link to={`/${base}/produtos`} className="px-4 py-3 bg-white/90 text-blue-900 font-bold rounded-full shadow-lg hover:bg-white transition-all duration-200 active:scale-[0.99]">
             {t('ctaMore')}
           </Link>
         </div>

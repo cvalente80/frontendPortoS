@@ -319,7 +319,7 @@ export default function ProdutoFrota() {
       </div>
       {/* Formulário de Proposta Frota (3 passos) */}
       {showForm && (
-      <div id="form-frota" ref={formRef} className="max-w-lg w-full mt-12 p-8 bg-white bg-opacity-90 rounded-2xl shadow-xl relative z-10">
+      <div id="form-frota" ref={formRef} className="as-card max-w-lg w-full mt-12 p-8 bg-white/90 shadow-xl relative z-10">
         <h2 className="text-3xl font-bold mb-6 text-blue-900 text-center">{t('formTitle')}</h2>
         {/* Stepper */}
         <div className="mb-6">
@@ -337,9 +337,9 @@ export default function ProdutoFrota() {
           {step === 1 && (
             <>
               <h3 className="text-xl font-semibold text-blue-700 mb-2 text-center">{t('step1Title')}</h3>
-              <input name="nome" value={form.nome} onChange={handleChange} placeholder={t('placeholders.name')} className="w-full p-3 border border-blue-300 rounded-lg" required onInvalid={e=>setCustomValidity(e, base==='en' ? 'Please enter your full name.' : 'Indique o nome completo.')} onInput={e=>setCustomValidity(e,'')} />
-              <input name="email" type="email" value={form.email} onChange={handleChange} placeholder={t('placeholders.email')} className="w-full p-3 border border-blue-300 rounded-lg" required pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$" onInvalid={e=>setCustomValidity(e, base==='en' ? 'Enter a valid email.' : 'Insira um email válido.')} onInput={e=>setCustomValidity(e,'')} />
-              <input name="contribuinte" value={form.contribuinte} onChange={handleChange} placeholder={t('placeholders.nif')} className={`w-full p-3 border rounded-lg ${form.contribuinte && !validarNIF(form.contribuinte) ? 'border-red-500' : 'border-blue-300'}`} required pattern="[0-9]{9}" maxLength={9} minLength={9} onInvalid={e=>setCustomValidity(e, base==='en' ? 'Invalid NIF (9 digits).' : 'NIF inválido (9 dígitos).')} onInput={e=>setCustomValidity(e,'')} />
+              <input name="nome" value={form.nome} onChange={handleChange} placeholder={t('placeholders.name')} className="as-input py-3 border-blue-300" required onInvalid={e=>setCustomValidity(e, base==='en' ? 'Please enter your full name.' : 'Indique o nome completo.')} onInput={e=>setCustomValidity(e,'')} />
+              <input name="email" type="email" value={form.email} onChange={handleChange} placeholder={t('placeholders.email')} className="as-input py-3 border-blue-300" required pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$" onInvalid={e=>setCustomValidity(e, base==='en' ? 'Enter a valid email.' : 'Insira um email válido.')} onInput={e=>setCustomValidity(e,'')} />
+              <input name="contribuinte" value={form.contribuinte} onChange={handleChange} placeholder={t('placeholders.nif')} className={`as-input py-3 ${form.contribuinte && !validarNIF(form.contribuinte) ? 'border-red-500' : 'border-blue-300'}`} required pattern="[0-9]{9}" maxLength={9} minLength={9} onInvalid={e=>setCustomValidity(e, base==='en' ? 'Invalid NIF (9 digits).' : 'NIF inválido (9 dígitos).')} onInput={e=>setCustomValidity(e,'')} />
               <div className="w-full relative">
                 <DatePicker
                   selected={form.dataNascimento ? new Date(form.dataNascimento) : null}
@@ -356,7 +356,7 @@ export default function ProdutoFrota() {
                   locale={base}
                   dateFormat="dd-MM-yyyy"
                   placeholderText={t('placeholders.birthDate')}
-                  className="w-full p-3 border border-blue-300 rounded-lg pr-10"
+                  className="as-input py-3 border-blue-300 pr-10"
                   required
                   todayButton={base==='en' ? 'Today' : 'Hoje'}
                   isClearable
@@ -366,7 +366,7 @@ export default function ProdutoFrota() {
                   yearDropdownItemNumber={100}
                   scrollableYearDropdown
                   value={form.dataNascimentoManual || ""}
-                  customInput={React.createElement('input', { type: 'text', className: 'w-full p-3 border border-blue-300 rounded-lg pr-10', value: form.dataNascimentoManual || '', required: true, readOnly: true, placeholder: t('placeholders.birthDate') })}
+                  customInput={React.createElement('input', { type: 'text', className: 'as-input py-3 border-blue-300 pr-10', value: form.dataNascimentoManual || '', required: true, readOnly: true, placeholder: t('placeholders.birthDate') })}
                   open={openNascimento}
                   onClickOutside={() => setOpenNascimento(false)}
                   renderCustomHeader={props => (
@@ -414,7 +414,7 @@ export default function ProdutoFrota() {
                   locale={base}
                   dateFormat="dd-MM-yyyy"
                   placeholderText={t('placeholders.licenseDate')}
-                  className="w-full p-3 border border-blue-300 rounded-lg pr-10"
+                  className="as-input py-3 border-blue-300 pr-10"
                   required
                   todayButton={base==='en' ? 'Today' : 'Hoje'}
                   isClearable
@@ -424,7 +424,7 @@ export default function ProdutoFrota() {
                   yearDropdownItemNumber={100}
                   scrollableYearDropdown
                   value={form.dataCartaConducao ? `${formatDate(form.dataCartaConducao)}` : ""}
-                  customInput={React.createElement('input', { type: 'text', className: 'w-full p-3 border border-blue-300 rounded-lg pr-10', value: form.dataCartaConducaoManual !== undefined ? form.dataCartaConducaoManual : (form.dataCartaConducao ? formatDate(form.dataCartaConducao) : ''), required: true, readOnly: true, placeholder: t('placeholders.licenseDate') })}
+                  customInput={React.createElement('input', { type: 'text', className: 'as-input py-3 border-blue-300 pr-10', value: form.dataCartaConducaoManual !== undefined ? form.dataCartaConducaoManual : (form.dataCartaConducao ? formatDate(form.dataCartaConducao) : ''), required: true, readOnly: true, placeholder: t('placeholders.licenseDate') })}
                   open={openCarta}
                   onClickOutside={() => setOpenCarta(false)}
                   renderCustomHeader={props => (
@@ -465,8 +465,8 @@ export default function ProdutoFrota() {
                   </button>
                 </div>
               </div>
-              <input name="codigoPostal" value={form.codigoPostal || ""} onChange={e=>{ let v=e.target.value.replace(/[^\d]/g,""); if(v.length>4) v=v.slice(0,4)+'-'+v.slice(4,7); if(v.length>8) v=v.slice(0,8); setForm(prev=>({...prev,codigoPostal:v})); }} placeholder={t('placeholders.postalCode')} className="w-full p-3 border border-blue-300 rounded-lg mt-2" maxLength={8} required pattern="^\d{4}-\d{3}$" onInvalid={e=>setCustomValidity(e, base==='en' ? 'Format XXXX-XXX.' : 'Formato XXXX-XXX.')} onInput={e=>setCustomValidity(e,'')} />
-              <div className="flex justify-end gap-2"><button type="button" className="px-6 py-2 bg-gray-200 rounded" disabled>{t('buttons.prev')}</button><button type="submit" className="px-6 py-2 bg-blue-700 text-white rounded font-bold hover:bg-blue-900 transition">{t('buttons.next')}</button></div>
+              <input name="codigoPostal" value={form.codigoPostal || ""} onChange={e=>{ let v=e.target.value.replace(/[^\d]/g,""); if(v.length>4) v=v.slice(0,4)+'-'+v.slice(4,7); if(v.length>8) v=v.slice(0,8); setForm(prev=>({...prev,codigoPostal:v})); }} placeholder={t('placeholders.postalCode')} className="as-input py-3 border-blue-300 mt-2" maxLength={8} required pattern="^\d{4}-\d{3}$" onInvalid={e=>setCustomValidity(e, base==='en' ? 'Format XXXX-XXX.' : 'Formato XXXX-XXX.')} onInput={e=>setCustomValidity(e,'')} />
+              <div className="flex justify-end gap-2"><button type="button" className="as-btn bg-gray-200 text-slate-900 hover:bg-gray-300" disabled>{t('buttons.prev')}</button><button type="submit" className="as-btn bg-blue-700 text-white hover:bg-blue-900">{t('buttons.next')}</button></div>
             </>
           )}
           {step === 2 && (
@@ -480,9 +480,9 @@ export default function ProdutoFrota() {
                       <button type="button" onClick={()=>removeVehicle(idx)} className="text-red-700 text-sm hover:underline" disabled={form.viaturas.length===1}>{t('vehicles.remove')}</button>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <input value={v.marca} onChange={e=>handleVehicleChange(idx,'marca',e.target.value)} placeholder={t('placeholders.carBrand')} className="w-full p-3 border border-blue-300 rounded-lg" required />
-                      <input value={v.modelo} onChange={e=>handleVehicleChange(idx,'modelo',e.target.value)} placeholder={t('placeholders.carModel')} className="w-full p-3 border border-blue-300 rounded-lg" required />
-                      <input value={v.ano} onChange={e=>handleVehicleChange(idx,'ano',e.target.value)} placeholder={t('placeholders.carYear')} className="w-full p-3 border border-blue-300 rounded-lg" required maxLength={4} />
+                      <input value={v.marca} onChange={e=>handleVehicleChange(idx,'marca',e.target.value)} placeholder={t('placeholders.carBrand')} className="as-input py-3 border-blue-300" required />
+                      <input value={v.modelo} onChange={e=>handleVehicleChange(idx,'modelo',e.target.value)} placeholder={t('placeholders.carModel')} className="as-input py-3 border-blue-300" required />
+                      <input value={v.ano} onChange={e=>handleVehicleChange(idx,'ano',e.target.value)} placeholder={t('placeholders.carYear')} className="as-input py-3 border-blue-300" required maxLength={4} />
                       <div className="flex justify-center">
                         <div className="border-4 border-gray-700 rounded-lg flex items-center px-4 py-2 shadow-md" style={{ minWidth: '180px', maxWidth: '220px', background: 'white' }}>
                           <input value={v.matricula} onChange={e=>handleVehicleChange(idx,'matricula',e.target.value)} placeholder={t('placeholders.plate')} className="text-center font-mono text-lg bg-transparent outline-none w-full" maxLength={8} required style={{ letterSpacing: '2px' }} />
@@ -493,23 +493,23 @@ export default function ProdutoFrota() {
                   </div>
                 ))}
                 <div>
-                  <button type="button" onClick={addVehicle} className="px-4 py-2 rounded bg-blue-100 text-blue-800 font-semibold hover:bg-blue-200">{t('vehicles.add')}</button>
+                  <button type="button" onClick={addVehicle} className="as-btn bg-blue-100 text-blue-800 hover:bg-blue-200">{t('vehicles.add')}</button>
                 </div>
               </div>
-              <div className="flex justify-between gap-2 mt-2"><button type="button" onClick={handlePrev} className="px-6 py-2 bg-gray-200 rounded">{t('buttons.prev')}</button><button type="submit" className="px-6 py-2 bg-blue-700 text-white rounded font-bold hover:bg-blue-900 transition">{t('buttons.next')}</button></div>
+              <div className="flex justify-between gap-2 mt-2"><button type="button" onClick={handlePrev} className="as-btn bg-gray-200 text-slate-900 hover:bg-gray-300">{t('buttons.prev')}</button><button type="submit" className="as-btn bg-blue-700 text-white hover:bg-blue-900">{t('buttons.next')}</button></div>
             </>
           )}
           {step === 3 && (
             <>
               <h3 className="text-xl font-semibold text-blue-700 mb-2 text-center">{t('step3Title')}</h3>
               <div className="mb-4 flex items-center gap-2">
-                <input type="checkbox" id="aceitaRgpd" name="aceitaRgpd" checked={!!form.aceitaRgpd} onChange={handleChange} className="accent-blue-700 w-5 h-5" required onInvalid={e => (e.target as HTMLInputElement).setCustomValidity(base==='en' ? 'You must accept the Privacy Policy & GDPR.' : 'Necessário aceitar a Política de Privacidade & RGPD.')} onInput={e => (e.target as HTMLInputElement).setCustomValidity('')} />
+                <input type="checkbox" id="aceitaRgpd" name="aceitaRgpd" checked={!!form.aceitaRgpd} onChange={handleChange} className="as-checkbox w-5 h-5" required onInvalid={e => (e.target as HTMLInputElement).setCustomValidity(base==='en' ? 'You must accept the Privacy Policy & GDPR.' : 'Necessário aceitar a Política de Privacidade & RGPD.')} onInput={e => (e.target as HTMLInputElement).setCustomValidity('')} />
                 <label htmlFor="aceitaRgpd" className="text-blue-900 text-sm select-none">
                   <Trans i18nKey="rgpdText" t={t} components={[<a href={`/${base}/politica-rgpd`} target="_blank" rel="noopener noreferrer" className="underline text-blue-700 hover:text-blue-900" />]} />
                 </label>
               </div>
               <label className="block font-semibold mb-2 text-left" htmlFor="tipoSeguro">{t('typeLabel')}</label>
-              <select id="tipoSeguro" name="tipoSeguro" value={form.tipoSeguro} onChange={handleChange} className="w-full p-3 border border-blue-300 rounded-lg text-left" required onInvalid={e=>setCustomValidity(e, base==='en' ? 'Select the insurance type.' : 'Selecione o tipo de seguro.')} onInput={e=>setCustomValidity(e,'')}>
+              <select id="tipoSeguro" name="tipoSeguro" value={form.tipoSeguro} onChange={handleChange} className="as-select py-3 border-blue-300 text-left" required onInvalid={e=>setCustomValidity(e, base==='en' ? 'Select the insurance type.' : 'Selecione o tipo de seguro.')} onInput={e=>setCustomValidity(e,'')}>
                 <option value="">{t('typeSelectPlaceholder')}</option>
                 <option value="thirdParty">{t('typeThirdParty')}</option>
                 <option value="ownDamage">{t('typeOwnDamage')}</option>
@@ -519,31 +519,31 @@ export default function ProdutoFrota() {
               <label className="block font-semibold mb-2">{t('additionalCoverages')}</label>
               {form.tipoSeguro === 'thirdParty' && (
                 <div className="flex flex-col gap-2">
-                  <label><input type="checkbox" name="coberturas" value="occupants" checked={form.coberturas.includes('occupants')} onChange={handleChange} /> {t('coverageLabels.occupants')}</label>
-                  <label><input type="checkbox" name="coberturas" value="glass" checked={form.coberturas.includes('glass')} onChange={handleChange} /> {t('coverageLabels.glass')}</label>
-                  <label><input type="checkbox" name="coberturas" value="assistance" checked={form.coberturas.includes('assistance')} onChange={handleChange} /> {t('coverageLabels.assistance')}</label>
-                  <label><input type="checkbox" name="coberturas" value="fire" checked={form.coberturas.includes('fire')} onChange={handleChange} /> {t('coverageLabels.fire')}</label>
-                  <label><input type="checkbox" name="coberturas" value="theft" checked={form.coberturas.includes('theft')} onChange={handleChange} /> {t('coverageLabels.theft')}</label>
+                  <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value="occupants" checked={form.coberturas.includes('occupants')} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.occupants')}</label>
+                  <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value="glass" checked={form.coberturas.includes('glass')} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.glass')}</label>
+                  <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value="assistance" checked={form.coberturas.includes('assistance')} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.assistance')}</label>
+                  <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value="fire" checked={form.coberturas.includes('fire')} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.fire')}</label>
+                  <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value="theft" checked={form.coberturas.includes('theft')} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.theft')}</label>
                 </div>
               )}
               {form.tipoSeguro === 'ownDamage' && (
                 <div className="flex flex-col gap-2">
-                  <label><input type="checkbox" name="coberturas" value="naturalCatastrophes" checked={form.coberturas.includes('naturalCatastrophes')} onChange={handleChange} /> {t('coverageLabels.naturalCatastrophes')}</label>
-                  <label><input type="checkbox" name="coberturas" value="vandalism" checked={form.coberturas.includes('vandalism')} onChange={handleChange} /> {t('coverageLabels.vandalism')}</label>
-                  <label><input type="checkbox" name="coberturas" value="replacementVehicle" checked={form.coberturas.includes('replacementVehicle')} onChange={handleChange} /> {t('coverageLabels.replacementVehicle')}</label>
+                  <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value="naturalCatastrophes" checked={form.coberturas.includes('naturalCatastrophes')} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.naturalCatastrophes')}</label>
+                  <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value="vandalism" checked={form.coberturas.includes('vandalism')} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.vandalism')}</label>
+                  <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value="replacementVehicle" checked={form.coberturas.includes('replacementVehicle')} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.replacementVehicle')}</label>
                 </div>
               )}
               <div className="mt-4">
                 <label className="block text-sm font-semibold mb-1">{t('otherRequestsLabel')}</label>
-                <textarea name="outrosPedidos" value={form.outrosPedidos || ''} onChange={handleChange} placeholder={t('placeholders.otherRequests')} className="w-full p-3 border rounded bg-white min-h-[90px]" />
+                <textarea name="outrosPedidos" value={form.outrosPedidos || ''} onChange={handleChange} placeholder={t('placeholders.otherRequests')} className="as-textarea min-h-[90px]" />
               </div>
-              <div className="flex justify-between gap-2 mt-4"><button type="button" onClick={handlePrev} className="px-6 py-2 bg-gray-200 rounded">{t('buttons.prev')}</button><button type="submit" className="px-6 py-2 bg-green-600 text-white rounded font-bold hover:bg-green-700 transition">{t('buttons.submit')}</button></div>
+              <div className="flex justify-between gap-2 mt-4"><button type="button" onClick={handlePrev} className="as-btn bg-gray-200 text-slate-900 hover:bg-gray-300">{t('buttons.prev')}</button><button type="submit" className="as-btn bg-green-600 text-white hover:bg-green-700">{t('buttons.submit')}</button></div>
             </>
           )}
         </form>
         {resultado && (<div className="mt-6 p-4 bg-blue-50 text-blue-900 rounded-lg text-center font-semibold shadow whitespace-pre-line">{resultado}</div>)}
         {mensagem && (
-          <div className={`fixed bottom-8 right-8 z-50 p-4 rounded-lg font-semibold shadow transition-opacity duration-500 ${mensagemTipo === 'sucesso' ? 'bg-green-100 text-green-900' : 'bg-red-100 text-red-900'}`} style={{ minWidth: '260px', maxWidth: '350px', textAlign: 'left' }}>
+          <div className={`as-alert fixed bottom-8 right-8 z-50 font-semibold shadow transition-opacity duration-500 ${mensagemTipo === 'sucesso' ? 'as-alert-success' : 'as-alert-error'}`} style={{ minWidth: '260px', maxWidth: '350px', textAlign: 'left' }}>
             {mensagem}
           </div>
         )}

@@ -35,17 +35,19 @@ export default function Register() {
 
   return (
     <div className="container mx-auto px-4 py-10 max-w-md">
-      <h1 className="text-2xl font-semibold mb-6">{t('auth.registerTitle', 'Criar conta')}</h1>
-      {error && <div className="mb-4 text-red-600 text-sm">{error}</div>}
-      {success && <div className="mb-4 text-green-700 text-sm">{success}</div>}
-      <form onSubmit={onSubmit} className="space-y-4">
-        <input className="w-full border rounded px-3 py-2" type="text" placeholder={t('auth.name', 'Nome')} value={name} onChange={e => setName(e.target.value)} required />
-        <input className="w-full border rounded px-3 py-2" type="email" placeholder={t('auth.email', 'Email')} value={email} onChange={e => setEmail(e.target.value)} required />
-        <input className="w-full border rounded px-3 py-2" type="password" placeholder={t('auth.passwordMin', 'Password (min 6)')} value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
-        <button disabled={pending} className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50">{pending ? 'A criar…' : t('auth.register', 'Criar conta')}</button>
-      </form>
-      <div className="text-sm mt-4">
-        Já tem conta? <NavLink to={`/${base}/auth/login`} className="underline">{t('auth.signIn', 'Entrar')}</NavLink>
+      <div className="as-card">
+        <h1 className="text-2xl font-semibold mb-6">{t('auth.registerTitle', 'Criar conta')}</h1>
+        {error && <div className="as-alert as-alert-error mb-4">{error}</div>}
+        {success && <div className="as-alert as-alert-success mb-4">{success}</div>}
+        <form onSubmit={onSubmit} className="space-y-4">
+          <input className="as-input" type="text" placeholder={t('auth.name', 'Nome')} value={name} onChange={e => setName(e.target.value)} required />
+          <input className="as-input" type="email" placeholder={t('auth.email', 'Email')} value={email} onChange={e => setEmail(e.target.value)} required />
+          <input className="as-input" type="password" placeholder={t('auth.passwordMin', 'Password (min 6)')} value={password} onChange={e => setPassword(e.target.value)} required minLength={6} />
+          <button disabled={pending} className="as-btn-primary w-full">{pending ? 'A criar…' : t('auth.register', 'Criar conta')}</button>
+        </form>
+        <div className="text-sm mt-4">
+          Já tem conta? <NavLink to={`/${base}/auth/login`} className="underline underline-offset-4">{t('auth.signIn', 'Entrar')}</NavLink>
+        </div>
       </div>
     </div>
   );

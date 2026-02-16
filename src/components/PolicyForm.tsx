@@ -146,14 +146,14 @@ export default function PolicyForm({ uid, policyId, initial, onSaved, submitLabe
   }
 
   return (
-    <div className="mt-3 p-3 border border-blue-100 rounded bg-blue-50/50">
+    <div className="as-card mt-3 bg-blue-50/50 border-blue-100">
       <h4 className="text-blue-900 font-semibold mb-2">{t('policies:form.title')}</h4>
-      {error && <div className="mb-2 text-sm text-red-800 bg-red-50 border border-red-200 rounded px-2 py-1">{error}</div>}
-      {ok && <div className="mb-2 text-sm text-green-800 bg-green-50 border border-green-200 rounded px-2 py-1">{ok}</div>}
+      {error && <div className="as-alert as-alert-error mb-3">{error}</div>}
+      {ok && <div className="as-alert as-alert-success mb-3">{ok}</div>}
       <div className="flex flex-col gap-3">
         <div>
           <label htmlFor="pf-holderName" className="block text-left text-sm text-blue-800 mb-1">{t('policies:form.holderName')}</label>
-          <input id="pf-holderName" className={`w-full border rounded px-2 py-1 ${validName ? 'border-blue-200' : 'border-red-300'}`} value={holderName} onChange={(e) => setHolderName(e.target.value)} placeholder={t('policies:placeholders.holderName') as string} />
+          <input id="pf-holderName" className={`as-input ${validName ? 'border-blue-200' : 'border-red-300'}`} value={holderName} onChange={(e) => setHolderName(e.target.value)} placeholder={t('policies:placeholders.holderName') as string} />
           {!validName && <p className="mt-1 text-xs text-red-700 text-left">{t('policies:errors.nameRequired')}</p>}
         </div>
         <div>
@@ -164,7 +164,7 @@ export default function PolicyForm({ uid, policyId, initial, onSaved, submitLabe
             inputMode="numeric"
             pattern="\\d*"
             maxLength={11}
-            className={`w-full border rounded px-2 py-1 ${validNif ? 'border-blue-200' : 'border-red-300'}`}
+            className={`as-input ${validNif ? 'border-blue-200' : 'border-red-300'}`}
             value={formatTripleGroups(nif)}
             onChange={(e) => setNif(e.target.value.replace(/\D/g, '').slice(0, 9))}
             placeholder={t('policies:placeholders.nif') as string}
@@ -177,7 +177,7 @@ export default function PolicyForm({ uid, policyId, initial, onSaved, submitLabe
             id="pf-cc"
             type="text"
             maxLength={14}
-            className={`w-full border rounded px-2 py-1 ${validCitizenCard ? 'border-blue-200' : 'border-red-300'}`}
+            className={`as-input ${validCitizenCard ? 'border-blue-200' : 'border-red-300'}`}
             value={citizenCardNumber}
             onChange={(e) => {
               const raw = e.target.value.toUpperCase().replace(/[^0-9A-Z\s]/g, '');
@@ -189,12 +189,12 @@ export default function PolicyForm({ uid, policyId, initial, onSaved, submitLabe
         </div>
         <div>
           <label htmlFor="pf-addr-street" className="block text-left text-sm text-blue-800 mb-1">{t('policies:form.addressStreet', 'Rua e nº')}</label>
-          <input id="pf-addr-street" className={`w-full border rounded px-2 py-1 ${validStreet ? 'border-blue-200' : 'border-red-300'}`} value={addressStreet} onChange={(e) => setAddressStreet(e.target.value)} placeholder={t('policies:placeholders.addressStreet', 'Rua e nº') as string} />
+          <input id="pf-addr-street" className={`as-input ${validStreet ? 'border-blue-200' : 'border-red-300'}`} value={addressStreet} onChange={(e) => setAddressStreet(e.target.value)} placeholder={t('policies:placeholders.addressStreet', 'Rua e nº') as string} />
           {!validStreet && <p className="mt-1 text-xs text-red-700 text-left">{t('policies:errors.addressStreetRequired', 'Indique a rua e nº')}</p>}
         </div>
         <div>
           <label htmlFor="pf-addr-locality" className="block text-left text-sm text-blue-800 mb-1">{t('policies:form.locality', 'Localidade')}</label>
-          <input id="pf-addr-locality" className={`w-full border rounded px-2 py-1 ${validLocality ? 'border-blue-200' : 'border-red-300'}`} value={addressLocality} onChange={(e) => setAddressLocality(e.target.value)} placeholder={t('policies:placeholders.locality', 'Localidade') as string} />
+          <input id="pf-addr-locality" className={`as-input ${validLocality ? 'border-blue-200' : 'border-red-300'}`} value={addressLocality} onChange={(e) => setAddressLocality(e.target.value)} placeholder={t('policies:placeholders.locality', 'Localidade') as string} />
           {!validLocality && <p className="mt-1 text-xs text-red-700 text-left">{t('policies:errors.localityRequired', 'Indique a localidade')}</p>}
         </div>
         <div>
@@ -205,7 +205,7 @@ export default function PolicyForm({ uid, policyId, initial, onSaved, submitLabe
             inputMode="numeric"
             pattern="\\d*"
             maxLength={8}
-            className={`w-full border rounded px-2 py-1 ${validPostal ? 'border-blue-200' : 'border-red-300'}`}
+            className={`as-input ${validPostal ? 'border-blue-200' : 'border-red-300'}`}
             value={addressPostalCode}
             onChange={(e) => {
               const digits = e.target.value.replace(/\D/g, '').slice(0, 7);
@@ -226,7 +226,7 @@ export default function PolicyForm({ uid, policyId, initial, onSaved, submitLabe
             inputMode="numeric"
             pattern="\\d*"
             maxLength={11}
-            className={`w-full border rounded px-2 py-1 ${validPhone ? 'border-blue-200' : 'border-red-300'}`}
+            className={`as-input ${validPhone ? 'border-blue-200' : 'border-red-300'}`}
             value={formatTripleGroups(phone)}
             onChange={(e) => {
               const digits = e.target.value.replace(/\D/g, '').slice(0, 9);
@@ -238,12 +238,12 @@ export default function PolicyForm({ uid, policyId, initial, onSaved, submitLabe
         </div>
         <div>
           <label htmlFor="pf-email" className="block text-left text-sm text-blue-800 mb-1">{t('policies:form.email')}</label>
-          <input id="pf-email" className={`w-full border rounded px-2 py-1 ${validEmail ? 'border-blue-200' : 'border-red-300'}`} value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('policies:placeholders.email') as string} />
+          <input id="pf-email" className={`as-input ${validEmail ? 'border-blue-200' : 'border-red-300'}`} value={email} onChange={(e) => setEmail(e.target.value)} placeholder={t('policies:placeholders.email') as string} />
           {!validEmail && <p className="mt-1 text-xs text-red-700 text-left">{t('policies:errors.invalidEmail')}</p>}
         </div>
         <div>
           <label htmlFor="pf-frequency" className="block text-left text-sm text-blue-800 mb-1">{t('policies:form.paymentFrequency')}</label>
-          <select id="pf-frequency" className="w-full border border-blue-200 rounded px-2 py-1" value={paymentFrequency} onChange={(e) => setPaymentFrequency(e.target.value as PaymentFrequency)}>
+          <select id="pf-frequency" className="as-select border-blue-200" value={paymentFrequency} onChange={(e) => setPaymentFrequency(e.target.value as PaymentFrequency)}>
             {freqOptions.map((opt) => (
               <option key={opt} value={opt}>{t(`policies:frequencies.${opt}`)}</option>
             ))}
@@ -253,7 +253,7 @@ export default function PolicyForm({ uid, policyId, initial, onSaved, submitLabe
           <label htmlFor="pf-method" className="block text-left text-sm text-blue-800 mb-1">{t('policies:form.paymentMethod', 'Forma de pagamento')}</label>
           <select
             id="pf-method"
-            className="w-full border border-blue-200 rounded px-2 py-1"
+            className="as-select border-blue-200"
             value={paymentMethod}
             onChange={(e) => {
               const val = e.target.value as 'multibanco' | 'debito_direto';
@@ -276,7 +276,7 @@ export default function PolicyForm({ uid, policyId, initial, onSaved, submitLabe
             id="pf-nib"
             type="text"
             maxLength={25}
-            className={`w-full border rounded px-2 py-1 ${validNib ? 'border-blue-200' : 'border-red-300'}`}
+            className={`as-input ${validNib ? 'border-blue-200' : 'border-red-300'}`}
             value={nib}
             onFocus={() => { if (!nib) setNib('PT50'); }}
             onChange={(e) => {
@@ -293,7 +293,7 @@ export default function PolicyForm({ uid, policyId, initial, onSaved, submitLabe
         )}
       </div>
       <div className="mt-3">
-        <button type="button" onClick={handleSave} disabled={!canSave || saving} className={`inline-flex items-center gap-2 px-3 py-1.5 rounded bg-blue-600 text-white hover:bg-blue-700 ${(!canSave || saving) ? 'opacity-60 cursor-not-allowed' : ''}`}>
+        <button type="button" onClick={handleSave} disabled={!canSave || saving} className={`as-btn bg-blue-600 text-white hover:bg-blue-700 ${(!canSave || saving) ? 'opacity-60 cursor-not-allowed' : ''}`}>
           {saving && <span className="w-3 h-3 inline-block border-2 border-white border-t-transparent rounded-full animate-spin" />}
           {submitLabel || t('policies:form.saveCta')}
         </button>
