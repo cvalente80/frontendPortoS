@@ -247,7 +247,7 @@ export default function Contato() {
         description={t('seoDesc')}
         canonicalPath={`/${base}/contato`}
       />
-      <div className="bg-white/80 backdrop-blur rounded-xl shadow-md p-6 md:p-8">
+      <div className="as-card p-6 md:p-8">
         <h2 className="text-3xl md:text-4xl font-bold text-blue-900 text-center">{t('pageTitle')}</h2>
         <p className="text-blue-700 text-center mt-2">{t('pageSubtitle')}</p>
         {/* Destaque de contacto telefónico */}
@@ -302,19 +302,19 @@ export default function Contato() {
           {/* Formulário */}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 gap-3">
-              <input name="nome" value={form.nome} onChange={handleChange} placeholder={t('placeholders.name')} className="w-full p-3 border border-blue-300 rounded-lg" required onInvalid={e=>setCustomValidity(e,t('validation.nameRequired'))} onInput={e=>setCustomValidity(e,'')} />
-              <input name="email" type="email" value={form.email} onChange={handleChange} placeholder={t('placeholders.email')} className="w-full p-3 border border-blue-300 rounded-lg" required pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$" onInvalid={e=>setCustomValidity(e,t('validation.emailInvalid'))} onInput={e=>setCustomValidity(e,'')} />
-              <input name="telefone" value={form.telefone} onChange={handleChange} placeholder={t('placeholders.phoneOptional')} className="w-full p-3 border border-blue-300 rounded-lg" />
+              <input name="nome" value={form.nome} onChange={handleChange} placeholder={t('placeholders.name')} className="as-input" required onInvalid={e=>setCustomValidity(e,t('validation.nameRequired'))} onInput={e=>setCustomValidity(e,'')} />
+              <input name="email" type="email" value={form.email} onChange={handleChange} placeholder={t('placeholders.email')} className="as-input" required pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$" onInvalid={e=>setCustomValidity(e,t('validation.emailInvalid'))} onInput={e=>setCustomValidity(e,'')} />
+              <input name="telefone" value={form.telefone} onChange={handleChange} placeholder={t('placeholders.phoneOptional')} className="as-input" />
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <select name="tipoPedido" value={form.tipoPedido} onChange={handleChange} className="w-full p-3 border border-blue-300 rounded-lg" required>
+              <select name="tipoPedido" value={form.tipoPedido} onChange={handleChange} className="as-select" required>
                 <option>{t('requestType.info')}</option>
                 <option>{t('requestType.adhoc')}</option>
                 <option>{t('requestType.contact')}</option>
                 <option>{t('requestType.change')}</option>
                 <option>{t('requestType.other')}</option>
               </select>
-              <select name="produtoInteresse" value={form.produtoInteresse} onChange={handleChange} className="w-full p-3 border border-blue-300 rounded-lg">
+              <select name="produtoInteresse" value={form.produtoInteresse} onChange={handleChange} className="as-select">
                 <option value="">{t('placeholders.productInterestOptional')}</option>
                 <option>{t('productInterest.auto')}</option>
                 <option>{t('productInterest.life')}</option>
@@ -327,21 +327,21 @@ export default function Contato() {
                 <option>{t('productInterest.other')}</option>
               </select>
             </div>
-            <input name="assunto" value={form.assunto} onChange={handleChange} placeholder={t('placeholders.subjectOptional')} className="w-full p-3 border border-blue-300 rounded-lg" />
-            <textarea name="mensagem" value={form.mensagem} onChange={handleChange} placeholder={t('placeholders.message')} className="w-full p-3 border border-blue-300 rounded-lg min-h-[140px]" required onInvalid={e=>setCustomValidity(e,t('validation.messageRequired'))} onInput={e=>setCustomValidity(e,'')} />
+            <input name="assunto" value={form.assunto} onChange={handleChange} placeholder={t('placeholders.subjectOptional')} className="as-input" />
+            <textarea name="mensagem" value={form.mensagem} onChange={handleChange} placeholder={t('placeholders.message')} className="as-textarea" required onInvalid={e=>setCustomValidity(e,t('validation.messageRequired'))} onInput={e=>setCustomValidity(e,'')} />
             <label className="flex items-start gap-2 text-sm text-blue-800">
-              <input type="checkbox" name="aceitaRgpd" checked={form.aceitaRgpd} onChange={handleChange} required onInvalid={e=> (e.target as HTMLInputElement).setCustomValidity(t('validation.rgpdRequired'))} onInput={e=> (e.target as HTMLInputElement).setCustomValidity('')} />
+              <input type="checkbox" name="aceitaRgpd" checked={form.aceitaRgpd} onChange={handleChange} className="as-checkbox" required onInvalid={e=> (e.target as HTMLInputElement).setCustomValidity(t('validation.rgpdRequired'))} onInput={e=> (e.target as HTMLInputElement).setCustomValidity('')} />
               <span>
                 <Trans i18nKey="rgpdText" t={t} components={[<a href={`/${base}/politica-rgpd`} className="underline" target="_blank" rel="noreferrer" />]} />
               </span>
             </label>
 
             {mensagem && (
-              <div className={"p-3 rounded " + (mensagemTipo==='sucesso' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800')}>{mensagem}</div>
+              <div className={mensagemTipo==='sucesso' ? 'as-alert-success' : 'as-alert-error'}>{mensagem}</div>
             )}
 
             <div className="flex justify-end">
-              <button type="submit" disabled={!canSubmit} className={`px-6 py-3 rounded font-bold text-white transition ${canSubmit ? 'bg-blue-700 hover:bg-blue-900' : 'bg-blue-300 cursor-not-allowed'}`}>
+              <button type="submit" disabled={!canSubmit} className="as-btn-primary">
                 {enviando ? t('messages.sending') : t('messages.submit')}
               </button>
             </div>

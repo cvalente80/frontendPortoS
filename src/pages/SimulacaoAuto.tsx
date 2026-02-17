@@ -330,7 +330,7 @@ export default function SimulacaoAuto() {
         canonicalPath={`/${base}/simulacao-auto`}
       />
       <img src="https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=1200&q=80" alt="Road" className="absolute inset-0 w-full h-full object-cover opacity-30" />
-      <div className="max-w-lg w-full p-8 bg-white bg-opacity-90 rounded-2xl shadow-xl relative z-10">
+      <div className="as-card max-w-lg w-full p-8 bg-white/90 shadow-xl relative z-10">
         <h2 className="text-3xl font-bold mb-6 text-blue-900 text-center">{t('title')}</h2>
         <div className="mb-6">
           <div className="flex items-center justify-center gap-2 mb-2">
@@ -360,7 +360,7 @@ export default function SimulacaoAuto() {
                 value={form.nome}
                 onChange={handleChange}
                 placeholder={t('placeholders.name')}
-                className={`w-full p-3 border rounded-lg ${form.nome && !nomeCompletoValido(form.nome) ? 'border-red-500' : 'border-blue-300'}`}
+                className={`as-input ${form.nome && !nomeCompletoValido(form.nome) ? 'border-red-500' : 'border-blue-300'}`}
                 required
                 onBlur={e => {
                   if (!nomeCompletoValido(e.target.value)) {
@@ -381,7 +381,7 @@ export default function SimulacaoAuto() {
                 value={form.email}
                 onChange={handleChange}
                 placeholder={t('placeholders.email')}
-                className="w-full p-3 border border-blue-300 rounded-lg"
+                className="as-input border-blue-300"
                 required
                 pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
                 onInvalid={e => {
@@ -413,7 +413,7 @@ export default function SimulacaoAuto() {
                   locale={base}
                   dateFormat="dd-MM-yyyy"
                   placeholderText={t('placeholders.birthDate')}
-                  className="w-full p-3 border border-blue-300 rounded-lg pr-10"
+                  className="as-input border-blue-300 pr-10"
                   required
                   todayButton={base==='en' ? 'Today' : 'Hoje'}
                   isClearable
@@ -426,7 +426,7 @@ export default function SimulacaoAuto() {
                   customInput={
                     React.createElement('input', {
                       type: 'text',
-                      className: 'w-full p-3 border border-blue-300 rounded-lg pr-10',
+                      className: 'as-input border-blue-300 pr-10',
                       value: form.dataNascimentoManual || '',
                       required: true,
                       readOnly: true,
@@ -490,7 +490,7 @@ export default function SimulacaoAuto() {
                   locale={base}
                   dateFormat="dd-MM-yyyy"
                   placeholderText={t('placeholders.licenseDate')}
-                  className="w-full p-3 border border-blue-300 rounded-lg pr-10"
+                  className="as-input border-blue-300 pr-10"
                   required
                   todayButton={base==='en' ? 'Today' : 'Hoje'}
                   isClearable
@@ -503,7 +503,7 @@ export default function SimulacaoAuto() {
                   customInput={
                     React.createElement('input', {
                       type: 'text',
-                      className: 'w-full p-3 border border-blue-300 rounded-lg pr-10',
+                      className: 'as-input border-blue-300 pr-10',
                       value: form.dataCartaConducaoManual !== undefined ? form.dataCartaConducaoManual : (form.dataCartaConducao ? formatDate(form.dataCartaConducao) : ''),
                       required: true,
                       readOnly: true,
@@ -562,7 +562,7 @@ export default function SimulacaoAuto() {
                   setForm({ ...form, codigoPostal: v });
                 }}
                 placeholder={t('placeholders.postalCode')}
-                className="w-full p-3 border border-blue-300 rounded-lg mt-2"
+                className="as-input border-blue-300 mt-2"
                 maxLength={8}
                 required
                 pattern="^\d{4}-\d{3}$"
@@ -583,7 +583,7 @@ export default function SimulacaoAuto() {
                 value={form.contribuinte || ""}
                 onChange={handleChange}
                 placeholder={t('placeholders.nif')}
-                className={`w-full p-3 border rounded-lg ${form.contribuinte && !validarNIF(form.contribuinte) ? 'border-red-500' : 'border-blue-300'}`}
+                className={`as-input ${form.contribuinte && !validarNIF(form.contribuinte) ? 'border-red-500' : 'border-blue-300'}`}
                 required
                 pattern="[0-9]{9}"
                 maxLength={9}
@@ -602,8 +602,8 @@ export default function SimulacaoAuto() {
                 <div className="text-red-600 text-sm mt-1">{t('validations.nifInvalid')}</div>
               )}
               <div className="flex justify-end gap-2">
-                <button type="button" className="px-6 py-2 bg-gray-200 rounded" disabled>{t('buttons.prev')}</button>
-                <button type="submit" className="px-6 py-2 bg-blue-700 text-white rounded font-bold hover:bg-blue-900 transition">{t('buttons.next')}</button>
+                <button type="button" className="as-btn bg-gray-200 text-slate-900 hover:bg-gray-300" disabled>{t('buttons.prev')}</button>
+                <button type="submit" className="as-btn bg-blue-700 text-white hover:bg-blue-900">{t('buttons.next')}</button>
               </div>
             </>
           )}
@@ -612,15 +612,15 @@ export default function SimulacaoAuto() {
               <h3 className="text-xl font-semibold text-blue-700 mb-2 text-center">{t('step2Title')}</h3>
               <div className="space-y-4">
                 <div>
-                  <input name="marca" value={form.marca || ""} onChange={handleChange} placeholder={t('placeholders.carBrand')} className="w-full p-3 border border-blue-300 rounded-lg" required onInvalid={e => setCustomValidity(e, t('validations.brandRequired'))} onInput={e => setCustomValidity(e, '')} />
+                  <input name="marca" value={form.marca || ""} onChange={handleChange} placeholder={t('placeholders.carBrand')} className="as-input border-blue-300" required onInvalid={e => setCustomValidity(e, t('validations.brandRequired'))} onInput={e => setCustomValidity(e, '')} />
                   <div className="text-[11px] text-blue-600 mt-1 italic pl-1 text-left">{t('examples.brand')}</div>
                 </div>
                 <div>
-                  <input name="modelo" value={form.modelo} onChange={handleChange} placeholder={t('placeholders.carModel')} className="w-full p-3 border border-blue-300 rounded-lg" required onInvalid={e => setCustomValidity(e, t('validations.modelRequired'))} onInput={e => setCustomValidity(e, '')} />
+                  <input name="modelo" value={form.modelo} onChange={handleChange} placeholder={t('placeholders.carModel')} className="as-input border-blue-300" required onInvalid={e => setCustomValidity(e, t('validations.modelRequired'))} onInput={e => setCustomValidity(e, '')} />
                   <div className="text-[11px] text-blue-600 mt-1 italic pl-1 text-left">{t('examples.model')}</div>
                 </div>
                 <div>
-                  <input name="versao" value={form.versao || ''} onChange={handleChange} placeholder={t('placeholders.carVersion')} className="w-full p-3 border border-blue-300 rounded-lg" />
+                  <input name="versao" value={form.versao || ''} onChange={handleChange} placeholder={t('placeholders.carVersion')} className="as-input border-blue-300" />
                   <div className="text-[11px] text-blue-600 mt-1 italic pl-1 text-left">{t('examples.version')}</div>
                 </div>
                 <div>
@@ -628,7 +628,7 @@ export default function SimulacaoAuto() {
   let v = e.target.value.replace(/[^\d]/g, "");
   if (v.length > 4) v = v.slice(0, 4);
   setForm({ ...form, ano: v });
-}} placeholder={t('placeholders.carYear')} className="w-full p-3 border border-blue-300 rounded-lg" required maxLength={4} onInvalid={e => setCustomValidity(e, t('validations.yearRequired'))} onInput={e => setCustomValidity(e, '')} />
+}} placeholder={t('placeholders.carYear')} className="as-input border-blue-300" required maxLength={4} onInvalid={e => setCustomValidity(e, t('validations.yearRequired'))} onInput={e => setCustomValidity(e, '')} />
                   <div className="text-[11px] text-blue-600 mt-1 italic pl-1 text-left">{t('examples.year')}</div>
                 </div>
               </div>
@@ -662,8 +662,8 @@ export default function SimulacaoAuto() {
   )}
 </div>
               <div className="flex justify-between gap-2">
-                <button type="button" onClick={handlePrev} className="px-6 py-2 bg-gray-200 rounded">{t('buttons.prev')}</button>
-                <button type="submit" className="px-6 py-2 bg-blue-700 text-white rounded font-bold hover:bg-blue-900 transition">{t('buttons.next')}</button>
+                <button type="button" onClick={handlePrev} className="as-btn bg-gray-200 text-slate-900 hover:bg-gray-300">{t('buttons.prev')}</button>
+                <button type="submit" className="as-btn bg-blue-700 text-white hover:bg-blue-900">{t('buttons.next')}</button>
               </div>
             </>
           )}
@@ -671,7 +671,7 @@ export default function SimulacaoAuto() {
             <>
               <h3 className="text-xl font-semibold text-blue-700 mb-2 text-center">{t('step3Title')}</h3>
               <label className="block font-semibold mb-2 text-left" htmlFor="tipoSeguro">{t('typeLabel')}</label>
-<select id="tipoSeguro" name="tipoSeguro" value={form.tipoSeguro || ""} onChange={handleChange} className="w-full p-3 border border-blue-300 rounded-lg text-left" required onInvalid={e => setCustomValidity(e, t('messages.selectType'))} onInput={e => setCustomValidity(e, '')}>
+<select id="tipoSeguro" name="tipoSeguro" value={form.tipoSeguro || ""} onChange={handleChange} className="as-select border-blue-300 text-left" required onInvalid={e => setCustomValidity(e, t('messages.selectType'))} onInput={e => setCustomValidity(e, '')}>
 
   <option value="">{t('typeSelectPlaceholder')}</option>
   <option value={t('typeThirdParty')}>{t('typeThirdParty')}</option>
@@ -687,32 +687,32 @@ export default function SimulacaoAuto() {
               {form.tipoSeguro === t('typeThirdParty') && (
   <div className="flex flex-col gap-2 mb-2">
     {(t('baseCoversThirdParty', { returnObjects: true }) as string[]).map((label, i) => (
-      <label key={i}><input type="checkbox" checked disabled /> {label}</label>
+      <label key={i} className="inline-flex items-center gap-2"><input type="checkbox" checked disabled className="as-checkbox" /> {label}</label>
     ))}
   </div>
 )}
 {form.tipoSeguro === t('typeOwnDamage') && (
   <div className="flex flex-col gap-2 mb-2">
     {(t('baseCoversOwnDamage', { returnObjects: true }) as string[]).map((label, i) => (
-      <label key={i}><input type="checkbox" checked disabled /> {label}</label>
+      <label key={i} className="inline-flex items-center gap-2"><input type="checkbox" checked disabled className="as-checkbox" /> {label}</label>
     ))}
   </div>
 )}
 <label className="block font-semibold mb-2">{t('additionalCoverages')}</label>
               {form.tipoSeguro === t('typeThirdParty') && (
   <div className="flex flex-col gap-2">
-    <label><input type="checkbox" name="coberturas" value={t('coverageLabels.occupants')} checked={form.coberturas.includes(t('coverageLabels.occupants'))} onChange={handleChange} /> {t('coverageLabels.occupants')}</label>
-    <label><input type="checkbox" name="coberturas" value={t('coverageLabels.glass')} checked={form.coberturas.includes(t('coverageLabels.glass'))} onChange={handleChange} /> {t('coverageLabels.glass')}</label>
-    <label><input type="checkbox" name="coberturas" value={t('coverageLabels.assistance')} checked={form.coberturas.includes(t('coverageLabels.assistance'))} onChange={handleChange} /> {t('coverageLabels.assistance')}</label>
-    <label><input type="checkbox" name="coberturas" value={t('coverageLabels.fire')} checked={form.coberturas.includes(t('coverageLabels.fire'))} onChange={handleChange} /> {t('coverageLabels.fire')}</label>
-    <label><input type="checkbox" name="coberturas" value={t('coverageLabels.theft')} checked={form.coberturas.includes(t('coverageLabels.theft'))} onChange={handleChange} /> {t('coverageLabels.theft')}</label>
+    <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value={t('coverageLabels.occupants')} checked={form.coberturas.includes(t('coverageLabels.occupants'))} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.occupants')}</label>
+    <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value={t('coverageLabels.glass')} checked={form.coberturas.includes(t('coverageLabels.glass'))} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.glass')}</label>
+    <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value={t('coverageLabels.assistance')} checked={form.coberturas.includes(t('coverageLabels.assistance'))} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.assistance')}</label>
+    <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value={t('coverageLabels.fire')} checked={form.coberturas.includes(t('coverageLabels.fire'))} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.fire')}</label>
+    <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value={t('coverageLabels.theft')} checked={form.coberturas.includes(t('coverageLabels.theft'))} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.theft')}</label>
   </div>
 )}
 {form.tipoSeguro === t('typeOwnDamage') && (
   <div className="flex flex-col gap-2">
-    <label><input type="checkbox" name="coberturas" value={t('coverageLabels.naturalCatastrophes')} checked={form.coberturas.includes(t('coverageLabels.naturalCatastrophes'))} onChange={handleChange} /> {t('coverageLabels.naturalCatastrophes')}</label>
-    <label><input type="checkbox" name="coberturas" value={t('coverageLabels.vandalism')} checked={form.coberturas.includes(t('coverageLabels.vandalism'))} onChange={handleChange} /> {t('coverageLabels.vandalism')}</label>
-    <label><input type="checkbox" name="coberturas" value={t('coverageLabels.replacementVehicle')} checked={form.coberturas.includes(t('coverageLabels.replacementVehicle'))} onChange={handleChange} /> {t('coverageLabels.replacementVehicle')}</label>
+    <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value={t('coverageLabels.naturalCatastrophes')} checked={form.coberturas.includes(t('coverageLabels.naturalCatastrophes'))} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.naturalCatastrophes')}</label>
+    <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value={t('coverageLabels.vandalism')} checked={form.coberturas.includes(t('coverageLabels.vandalism'))} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.vandalism')}</label>
+    <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value={t('coverageLabels.replacementVehicle')} checked={form.coberturas.includes(t('coverageLabels.replacementVehicle'))} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.replacementVehicle')}</label>
   </div>
 )}
 <div className="mt-4">
@@ -722,12 +722,12 @@ export default function SimulacaoAuto() {
     value={form.outrosPedidos || ''}
     onChange={handleChange}
     placeholder={t('placeholders.otherRequests')}
-    className="w-full p-3 border rounded bg-white min-h-[90px]"
+    className="as-textarea min-h-[90px]"
   />
 </div>
               <div className="flex justify-between gap-2 mt-4">
-                <button type="button" onClick={handlePrev} className="px-6 py-2 bg-gray-200 rounded">{t('buttons.prev')}</button>
-                <button type="submit" disabled={isSubmitting} className={`px-6 py-2 text-white rounded font-bold transition ${isSubmitting ? 'bg-green-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}>{isSubmitting ? t('buttons.simulating', { defaultValue: 'A enviar…' }) : t('buttons.simulate')}</button>
+                <button type="button" onClick={handlePrev} className="as-btn bg-gray-200 text-slate-900 hover:bg-gray-300">{t('buttons.prev')}</button>
+                <button type="submit" disabled={isSubmitting} className={`as-btn text-white ${isSubmitting ? 'bg-green-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}>{isSubmitting ? t('buttons.simulating', { defaultValue: 'A enviar…' }) : t('buttons.simulate')}</button>
               </div>
                 {/* RGPD Checkbox moved to bottom */}
                 <div className="mb-4 mt-2 flex items-start gap-2">
@@ -735,8 +735,7 @@ export default function SimulacaoAuto() {
                     type="checkbox"
                     id="aceitaRgpd"
                     required
-                    className="accent-blue-700 w-5 h-5 mt-0.5"
-                    style={{ minWidth: 20, minHeight: 20 }}
+                    className="as-checkbox w-5 h-5 mt-0.5"
                     onInvalid={e => (e.target as HTMLInputElement).setCustomValidity(t('validations.rgpdRequired'))}
                     onInput={e => (e.target as HTMLInputElement).setCustomValidity('')}
                   />
@@ -749,7 +748,7 @@ export default function SimulacaoAuto() {
         </form>
         {resultado && <div className="mt-6 p-4 bg-blue-50 text-blue-900 rounded-lg text-center font-semibold shadow whitespace-pre-line">{resultado}</div>}
         {mensagem && (
-          <div className={`fixed bottom-8 right-8 z-50 p-4 rounded-lg font-semibold shadow transition-opacity duration-500 ${mensagemTipo === 'sucesso' ? 'bg-green-100 text-green-900' : 'bg-red-100 text-red-900'}`}
+          <div className={`as-alert fixed bottom-8 right-8 z-50 font-semibold shadow transition-opacity duration-500 ${mensagemTipo === 'sucesso' ? 'as-alert-success' : 'as-alert-error'}`}
             style={{ minWidth: '260px', maxWidth: '350px', textAlign: 'left' }}>
             {mensagem.split('\n').map((line, idx) => (
               <div key={idx} style={{ textAlign: 'left' }}>{line}</div>

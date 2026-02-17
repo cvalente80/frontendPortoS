@@ -38,7 +38,7 @@ export default function Login() {
         <button
           onClick={handleLogout}
           disabled={pending}
-          className="rounded bg-gray-900 px-3 py-1.5 text-white hover:bg-gray-800 disabled:opacity-60"
+          className="as-btn bg-gray-900 text-white hover:bg-gray-800 disabled:opacity-60"
         >
           {t('auth.signOut', 'Sair')}
         </button>

@@ -96,7 +96,7 @@ export default function Home() {
 	const benefitsTitle = rawBenefitsTitle
 		.replace(/Ansião Seguros/g, brandName);
 	return (
-		<div className="min-h-screen bg-white flex flex-col relative">
+		<div className="min-h-screen bg-slate-50 flex flex-col relative">
 			<Seo
 				title={t('heroTitle')}
 				image={`${import.meta.env.BASE_URL}logo-empresarial.svg`}
@@ -105,7 +105,7 @@ export default function Home() {
 			{/* Hero responsivo */}
 			<ResponsiveGate mobile={<HeroMobile />} desktop={<HeroDesktop />} />
 			{/* Produtos em destaque */}
-			<section className="py-16 px-6 bg-gray-50">
+			<section className="py-16 px-6 bg-gradient-to-b from-slate-50 to-white">
 				<h2 className="text-3xl font-bold text-blue-900 mb-10 text-center">
 					{t('featuredIndividuals')}
 				</h2>
@@ -127,7 +127,7 @@ export default function Home() {
 				/>
 			</section>
 			{/* Produtos para empresas */}
-			<section className="py-16 px-6 bg-gray-50">
+			<section className="py-16 px-6 bg-gradient-to-b from-white to-slate-50">
 				<h2 className="text-3xl font-bold text-blue-900 mb-10 text-center">
 					{t('featuredBusiness')}
 				</h2>
@@ -150,7 +150,7 @@ export default function Home() {
 			</section>
 			{/* Benefícios */}
 			<section className="py-16 px-6 bg-white">
-				<div className="max-w-4xl mx-auto bg-blue-50 rounded-xl shadow-xl p-8">
+				<div className="max-w-4xl mx-auto bg-blue-50/70 rounded-2xl shadow-sm border border-blue-100 p-8">
 					<h2 className="text-2xl font-bold text-blue-900 mb-4 text-center">
 						{benefitsTitle}
 					</h2>

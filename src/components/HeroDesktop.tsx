@@ -46,10 +46,10 @@ export default function HeroDesktop() {
                   aria-label={t(`heroSlides.${idx}.cta`)}
                   className={
                     idx === 0
-                      ? 'px-8 py-4 bg-yellow-400 text-blue-900 font-bold rounded-full shadow-lg hover:bg-yellow-300 transition'
+                      ? 'px-8 py-4 bg-yellow-400 text-blue-900 font-bold rounded-full shadow-lg hover:bg-yellow-300 transition-all duration-200 active:scale-[0.99]'
                       : idx === 1
-                        ? 'px-8 py-4 bg-green-400 text-blue-900 font-bold rounded-full shadow-lg hover:bg-green-300 transition'
-                        : 'px-8 py-4 bg-blue-400 text-white font-bold rounded-full shadow-lg hover:bg-blue-300 transition'
+                        ? 'px-8 py-4 bg-green-400 text-blue-900 font-bold rounded-full shadow-lg hover:bg-green-300 transition-all duration-200 active:scale-[0.99]'
+                        : 'px-8 py-4 bg-blue-400 text-white font-bold rounded-full shadow-lg hover:bg-blue-300 transition-all duration-200 active:scale-[0.99]'
                   }
                 >
                   {t(`heroSlides.${idx}.cta`)}

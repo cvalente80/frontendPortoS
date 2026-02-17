@@ -236,7 +236,7 @@ export default function SimulacaoSaude() {
 				className="absolute inset-0 w-full h-full object-cover opacity-25"
 				onError={(e) => { (e.currentTarget as HTMLImageElement).src = '/family-happy2.png'; }}
 			/>
-			<div className="relative z-10 max-w-5xl w-full bg-white bg-opacity-90 rounded-xl shadow-xl p-6 md:p-8">
+			<div className="relative z-10 as-card max-w-5xl w-full bg-white/90 md:p-8">
 				<h1 className="text-3xl font-bold text-blue-900 mb-6 text-center">{t('title')}</h1>
 				<form className="space-y-4" onSubmit={handleSubmit}>
 					{step === 1 && (
@@ -255,7 +255,7 @@ export default function SimulacaoSaude() {
 												value={seg.nome}
 												onChange={e => { handleChangeSegurado(e as any, idx); setErrosSegurados(errs => { const copy = [...errs]; if (copy[idx]) copy[idx].nome = ''; return copy; }); }}
 												placeholder={t('placeholders.fullName')}
-												className={`w-full rounded border h-11 pl-10 ${errosSegurados[idx]?.nome ? 'border-red-500' : ''}`}
+												className={`as-input pl-10 ${errosSegurados[idx]?.nome ? 'border-red-500' : ''}`}
 												required
 												onInvalid={e => (e.target as HTMLInputElement).setCustomValidity(t('validations.insuredNameRequired'))}
 												onInput={e => (e.target as HTMLInputElement).setCustomValidity('')}
@@ -281,7 +281,7 @@ export default function SimulacaoSaude() {
 												locale={base}
 												dateFormat="dd-MM-yyyy"
 												placeholderText={t('placeholders.birthDate')}
-												className="w-full rounded pr-10"
+												className="as-input pr-10"
 												required
 												showMonthDropdown
 												showYearDropdown
@@ -295,7 +295,7 @@ export default function SimulacaoSaude() {
 														</button>
 														<input
 															type="text"
-															className="w-full p-2 rounded border pl-10 pr-10"
+															className="as-input pl-10 pr-10"
 															value={seg.nascimentoManual || ''}
 															required
 															readOnly
@@ -323,7 +323,7 @@ export default function SimulacaoSaude() {
 												value={seg.contribuinte}
 												onChange={e => { handleChangeSegurado(e as any, idx); setErrosSegurados(errs => { const copy = [...errs]; if (copy[idx]) copy[idx].contribuinte = ''; return copy; }); }}
 												placeholder={t('placeholders.nif')}
-												className={`w-full rounded border h-11 pl-10 ${errosSegurados[idx]?.contribuinte ? 'border-red-500' : ''}`}
+												className={`as-input pl-10 ${errosSegurados[idx]?.contribuinte ? 'border-red-500' : ''}`}
 												required
 												pattern="^[0-9]{9}$"
 												maxLength={9}
@@ -340,12 +340,12 @@ export default function SimulacaoSaude() {
 							</div>
 							<div className="mt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2">
 								{segurados.length < 5 ? (
-									<button type="button" onClick={addSegurado} className="px-4 py-2 bg-blue-200 text-blue-900 font-bold rounded hover:bg-blue-300 transition">{t('buttons.addInsured')}</button>
+										<button type="button" onClick={addSegurado} className="as-btn bg-blue-200 text-blue-900 hover:bg-blue-300">{t('buttons.addInsured')}</button>
 								) : (
 									<p className="text-xs text-blue-700 font-medium">{t('buttons.maxReached5')}</p>
 								)}
 								<div className="flex-1" />
-								<button type="button" onClick={handleNext} className="px-6 py-2 bg-blue-700 text-white rounded font-bold hover:bg-blue-900 transition self-end">{t('buttons.next')}</button>
+									<button type="button" onClick={handleNext} className="as-btn bg-blue-700 text-white hover:bg-blue-900 self-end">{t('buttons.next')}</button>
 							</div>
 						</div>
 					)}
@@ -432,7 +432,7 @@ export default function SimulacaoSaude() {
 										type="text"
 										value={nome}
 										onChange={e => setNome(e.target.value)}
-										className="w-full rounded border h-11 px-3"
+										className="as-input"
 										placeholder={t('placeholders.yourName')}
 										required
 										onInvalid={e => (e.target as HTMLInputElement).setCustomValidity(t('validations.nameRequired'))}
@@ -445,7 +445,7 @@ export default function SimulacaoSaude() {
 										type="email"
 										value={email}
 										onChange={e => setEmail(e.target.value)}
-										className="w-full rounded border h-11 px-3"
+										className="as-input"
 										placeholder={t('placeholders.email')}
 										required
 										pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
@@ -466,7 +466,7 @@ export default function SimulacaoSaude() {
 											const onlyDigits = e.target.value.replace(/\D/g, '').slice(0, 9);
 											setTelefone(onlyDigits);
 										}}
-										className="w-full rounded border h-11 px-3"
+										className="as-input"
 										placeholder={t('placeholders.phone')}
 										required
 										inputMode="numeric"
@@ -479,14 +479,14 @@ export default function SimulacaoSaude() {
 							</div>
 
 							<div className="flex justify-between mt-6">
-								<button type="button" onClick={() => setStep(1)} className="px-6 py-2 bg-gray-200 rounded">{t('buttons.prev')}</button>
-								<button type="submit" disabled={isSubmitting} className={`px-6 py-2 text-white rounded font-bold transition ${isSubmitting ? 'bg-green-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}>{isSubmitting ? t('buttons.submitting', { defaultValue: 'A enviar…' }) : t('buttons.submit')}</button>
+								<button type="button" onClick={() => setStep(1)} className="as-btn bg-gray-200 text-slate-900 hover:bg-gray-300">{t('buttons.prev')}</button>
+								<button type="submit" disabled={isSubmitting} className={`as-btn text-white ${isSubmitting ? 'bg-green-300 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'}`}>{isSubmitting ? t('buttons.submitting', { defaultValue: 'A enviar…' }) : t('buttons.submit')}</button>
 							</div>
 						</div>
 					)}
 				</form>
 				{mensagemSucesso && (
-					<div className="fixed bottom-8 right-8 z-50 p-4 rounded-lg font-semibold shadow bg-green-100 text-green-900" style={{ minWidth: '260px', maxWidth: '350px', textAlign: 'left' }}>
+					<div className="as-alert as-alert-success fixed bottom-8 right-8 z-50 font-semibold shadow" style={{ minWidth: '260px', maxWidth: '350px', textAlign: 'left' }}>
 						{mensagemSucesso}
 					</div>
 				)}
