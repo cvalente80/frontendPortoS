@@ -8,3 +8,140 @@
   z-index: 20;
   pointer-events: auto;
 }
+
+/* ───────── Hero Animations ───────── */
+@keyframes hero-gradient {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-12px); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(59,130,246,0.3); }
+  50%      { box-shadow: 0 0 40px rgba(59,130,246,0.6); }
+}
+
+@keyframes count-up-scale {
+  from { transform: scale(0.6); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes slide-in-right {
+  from { opacity: 0; transform: translateX(40px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes shimmer {
+  from { background-position: -200% 0; }
+  to   { background-position: 200% 0; }
+}
+
+.anim-hero-gradient {
+  background-size: 300% 300%;
+  animation: hero-gradient 12s ease infinite;
+}
+
+.anim-fade-in-up   { animation: fade-in-up 0.8s ease both; }
+.anim-fade-in       { animation: fade-in 0.6s ease both; }
+.anim-float         { animation: float 6s ease-in-out infinite; }
+.anim-pulse-glow    { animation: pulse-glow 3s ease-in-out infinite; }
+.anim-count-scale   { animation: count-up-scale 0.6s ease both; }
+.anim-slide-left    { animation: slide-in-left 0.7s ease both; }
+.anim-slide-right   { animation: slide-in-right 0.7s ease both; }
+
+.anim-delay-100  { animation-delay: 0.1s; }
+.anim-delay-200  { animation-delay: 0.2s; }
+.anim-delay-300  { animation-delay: 0.3s; }
+.anim-delay-400  { animation-delay: 0.4s; }
+.anim-delay-500  { animation-delay: 0.5s; }
+.anim-delay-600  { animation-delay: 0.6s; }
+.anim-delay-700  { animation-delay: 0.7s; }
+.anim-delay-800  { animation-delay: 0.8s; }
+.anim-delay-1000 { animation-delay: 1.0s; }
+.anim-delay-1200 { animation-delay: 1.2s; }
+
+/* Shimmer underline */
+.shimmer-underline {
+  background: linear-gradient(90deg, #facc15, #f59e0b, #facc15);
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+  height: 4px;
+  border-radius: 2px;
+}
+
+/* Glass card */
+.glass-card {
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255,255,255,0.18);
+}
+
+/* Stat card glass variant */
+.stat-glass {
+  background: rgba(255,255,255,0.08);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.15);
+  transition: all 0.3s ease;
+}
+.stat-glass:hover {
+  background: rgba(255,255,255,0.16);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+}
+
+/* Benefit card */
+.benefit-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.benefit-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 60px -15px rgba(30,64,175,0.15);
+}
+
+/* Section reveal */
+@keyframes section-reveal {
+  from { opacity: 0; transform: translateY(40px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.anim-section-reveal {
+  animation: section-reveal 0.8s ease both;
+}
+
+/* Floating orbs for hero background */
+.hero-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  opacity: 0.3;
+  animation: float 8s ease-in-out infinite;
+}
+
+/* Modern product card hover */
+.product-card-modern {
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.product-card-modern:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+}
