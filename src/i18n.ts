@@ -505,7 +505,7 @@ const resources = {
     },
     sim_auto: {
       title: 'Simulação de Seguro Auto',
-      stepProgress: 'Passo {{step}} de 3',
+      stepProgress: 'Passo {{step}} de 4',
       step1Title: 'Passo 1 - Identificação do condutor',
       step2Title: 'Passo 2 - Identificação da viatura',
       step3Title: 'Passo 3 - Produto e coberturas adicionais',
@@ -1677,7 +1677,7 @@ const resources = {
     },
     sim_auto: {
       title: 'Car Insurance Quote',
-      stepProgress: 'Step {{step}} of 3',
+      stepProgress: 'Step {{step}} of 4',
       step1Title: 'Step 1 — Driver details',
       step2Title: 'Step 2 — Vehicle details',
       step3Title: 'Step 3 — Product and additional cover',

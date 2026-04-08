@@ -1,7 +1,6 @@
 import React, { useRef, useState } from "react";
 import Seo from "../components/Seo";
-import emailjs from "@emailjs/browser";
-import { EMAILJS_SERVICE_ID_SAUDE, EMAILJS_TEMPLATE_ID_SAUDE, EMAILJS_USER_ID_SAUDE } from "../emailjs.config";
+import { safeEmailSend, EMAILJS_SERVICE_ID_SAUDE, EMAILJS_TEMPLATE_ID_SAUDE, EMAILJS_USER_ID_SAUDE } from "../emailjs.config";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { pt } from "date-fns/locale/pt";
 import { enGB } from "date-fns/locale/en-GB";
@@ -172,8 +171,7 @@ export default function SimulacaoSaude() {
 					console.warn('[SimulacaoSaude] Falha a guardar simulação (ignorado):', err);
 				}
 			}
-			await emailjs
-			.send(EMAILJS_SERVICE_ID_SAUDE, EMAILJS_TEMPLATE_ID_SAUDE, templateParams, EMAILJS_USER_ID_SAUDE)
+			await safeEmailSend(EMAILJS_SERVICE_ID_SAUDE, EMAILJS_TEMPLATE_ID_SAUDE, templateParams, EMAILJS_USER_ID_SAUDE)
 			;
 			console.log('[EmailJS][Saude] Success');
 				setMensagemSucesso(t('messages.submitSuccess'));

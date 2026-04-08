@@ -1,0 +1,13 @@
+{
+  "loginUsername": "input[type='email'], input[name*='user' i], input[id*='user' i], input[type='text']",
+  "loginPassword": "input[type='password']",
+  "loginSubmit": "button[type='submit'], input[type='submit']",
+  "plate": "input[name='plate']",
+  "postalCode": "input[name='postalCode']",
+  "birthDate": "input[name='birthDate']",
+  "email": "input[type='email']",
+  "phone": "input[type='tel']",
+  "consentCheckbox": "input[type='checkbox']",
+  "submitButton": "button[type='submit']",
+  "resultContainer": "main, [role='main']"
+}

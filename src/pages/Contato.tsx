@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from "react";
 import Seo from "../components/Seo";
-import emailjs from "@emailjs/browser";
-import { EMAILJS_SERVICE_ID_GENERIC, EMAILJS_TEMPLATE_ID_GENERIC, EMAILJS_USER_ID_GENERIC } from "../emailjs.config";
+import { safeEmailSend, EMAILJS_SERVICE_ID_GENERIC, EMAILJS_TEMPLATE_ID_GENERIC, EMAILJS_USER_ID_GENERIC } from "../emailjs.config";
 import { Trans, useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 
@@ -170,8 +169,7 @@ export default function Contato() {
       console.debug('[EmailJS][Contato] detalhes_html length:', templateParams.detalhes_html?.length);
     }
 
-    emailjs
-      .send(EMAILJS_SERVICE_ID_GENERIC, EMAILJS_TEMPLATE_ID_GENERIC, templateParams, EMAILJS_USER_ID_GENERIC)
+    safeEmailSend(EMAILJS_SERVICE_ID_GENERIC, EMAILJS_TEMPLATE_ID_GENERIC, templateParams, EMAILJS_USER_ID_GENERIC)
       .then(() => {
         setMensagem(t('messages.success'));
         setMensagemTipo('sucesso');

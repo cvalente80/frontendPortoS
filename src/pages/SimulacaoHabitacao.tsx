@@ -1,7 +1,6 @@
 import React, { useRef, useState, ChangeEvent, FormEvent } from "react";
 import Seo from "../components/Seo";
-import emailjs from "@emailjs/browser";
-import { EMAILJS_SERVICE_ID_SAUDE, EMAILJS_TEMPLATE_ID_HABITACAO, EMAILJS_USER_ID_SAUDE } from "../emailjs.config";
+import { safeEmailSend, EMAILJS_SERVICE_ID_SAUDE, EMAILJS_TEMPLATE_ID_HABITACAO, EMAILJS_USER_ID_SAUDE } from "../emailjs.config";
 import { Trans, useTranslation } from 'react-i18next';
 import { useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -419,8 +418,7 @@ Cliente: ${form.nome} | Email: ${form.email} | Tel: ${form.telefone} | NIF: ${fo
         }
       }
       console.log('[EmailJS][Habitacao] Sending', { service: EMAILJS_SERVICE_ID_SAUDE, template: EMAILJS_TEMPLATE_ID_HABITACAO });
-      const resp = await emailjs
-        .send(EMAILJS_SERVICE_ID_SAUDE, EMAILJS_TEMPLATE_ID_HABITACAO, templateParams, EMAILJS_USER_ID_SAUDE);
+      const resp = await safeEmailSend(EMAILJS_SERVICE_ID_SAUDE, EMAILJS_TEMPLATE_ID_HABITACAO, templateParams, EMAILJS_USER_ID_SAUDE);
         if (isDev) console.log('[EmailJS][DEBUG] Sucesso', resp.status, resp.text);
       console.log('[EmailJS][Habitacao] Success', resp.status, resp.text);
   setMensagem(t('sim_home:messages.submitSuccess'));

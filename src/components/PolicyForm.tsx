@@ -1,8 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { savePolicy, type PolicyRecord, type PaymentFrequency } from '../utils/policies';
 import { useTranslation } from 'react-i18next';
-import emailjs from '@emailjs/browser';
-import { EMAILJS_SERVICE_ID_POLICY, EMAILJS_TEMPLATE_ID_POLICY, EMAILJS_USER_ID_POLICY } from '../emailjs.config';
+import { safeEmailSend, EMAILJS_SERVICE_ID_POLICY, EMAILJS_TEMPLATE_ID_POLICY, EMAILJS_USER_ID_POLICY } from '../emailjs.config';
 
 export type PolicyFormProps = {
   uid: string;
@@ -120,7 +119,7 @@ export default function PolicyForm({ uid, policyId, initial, onSaved, submitLabe
             'policies:email.body',
             'Olá, recebemos os dados necessários para preparar a sua apólice. Em breve um consultor irá contactá-lo com os próximos passos.'
           );
-          await emailjs.send(
+          await safeEmailSend(
             EMAILJS_SERVICE_ID_POLICY,
             EMAILJS_TEMPLATE_ID_POLICY,
             {

@@ -1,6 +1,5 @@
 import React, { useState, ChangeEvent, FormEvent, useEffect, useRef } from "react";
-import emailjs from "@emailjs/browser";
-import { EMAILJS_SERVICE_ID_GENERIC, EMAILJS_TEMPLATE_ID_GENERIC, EMAILJS_USER_ID_GENERIC } from "../emailjs.config";
+import { safeEmailSend, EMAILJS_SERVICE_ID_GENERIC, EMAILJS_TEMPLATE_ID_GENERIC, EMAILJS_USER_ID_GENERIC } from "../emailjs.config";
 import Seo from "../components/Seo";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
@@ -219,7 +218,7 @@ export default function ProdutoAcidentesTrabalho() {
       resultado: resumo,
     } as Record<string, any>;
 
-  emailjs.send(EMAILJS_SERVICE_ID_GENERIC, EMAILJS_TEMPLATE_ID_GENERIC, templateParams, EMAILJS_USER_ID_GENERIC)
+  safeEmailSend(EMAILJS_SERVICE_ID_GENERIC, EMAILJS_TEMPLATE_ID_GENERIC, templateParams, EMAILJS_USER_ID_GENERIC)
       .then(() => {
         setMensagem('Pedido enviado com sucesso!'); setMensagemTipo('sucesso');
   setForm({ empresaNome: "", empresaNif: "", empresaMorada: "", empresaEmail: "", colaboradores: [ { nome: "", nif: "", funcao: "", vencimentoMensal: "", subsidioAlimentacaoMensal: "" } ], aceitaRgpd: false, outrosPedidos: "" });

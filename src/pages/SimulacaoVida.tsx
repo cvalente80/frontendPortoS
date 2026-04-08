@@ -1,6 +1,6 @@
 import React, { useRef, useState } from "react";
 import Seo from "../components/Seo";
-import emailjs from "@emailjs/browser";
+import { safeEmailSend } from "../emailjs.config";
 import { EMAILJS_SERVICE_ID, EMAILJS_USER_ID } from "../emailjs.config";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { pt } from "date-fns/locale/pt";
@@ -134,7 +134,7 @@ export default function SimulacaoVida() {
 				}
 			}
 			console.log('[EmailJS][Vida] Sending', { service: EMAILJS_SERVICE_ID, template: 'template_95ayhir' });
-			await emailjs.send(
+			await safeEmailSend(
 			EMAILJS_SERVICE_ID,
 			"template_95ayhir",
 			templateParams,

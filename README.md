@@ -119,3 +119,11 @@ If you are developing a production application, we recommend using TypeScript wi
 - Switcher de idioma no topo preserva o caminho atual ao alternar PT/EN.
 - i18n com i18next + react-i18next configurado em `src/i18n.ts`.
 - SEO ajusta `html[lang]` e `og:locale` dinamicamente.
+
+## Transferência de simulação com Playwright
+
+- Target por omissão: `https://myzurich.zurich.com.pt/`.
+- Guia completo: `docs/playwright-transfer.md`.
+- Seletores iniciais Zurich: `scripts/playwright-transfer/selectors.zurich.json`.
+- Runner local: `npm run pw:transfer:local -- --url file://$PWD/scripts/playwright-transfer/demo-form.html`.
+- Worker (uma execução): `npm run pw:transfer:worker`.

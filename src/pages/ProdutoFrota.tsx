@@ -3,7 +3,7 @@ import DatePicker, { registerLocale } from "react-datepicker";
 import { pt } from "date-fns/locale/pt";
 import { enGB } from "date-fns/locale/en-GB";
 import "react-datepicker/dist/react-datepicker.css";
-import emailjs from "@emailjs/browser";
+import { safeEmailSend } from "../emailjs.config";
 import { Link, useLocation, useParams } from "react-router-dom";
 import { EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_USER_ID } from "../emailjs.config";
 import Seo from "../components/Seo";
@@ -219,7 +219,7 @@ export default function ProdutoFrota() {
       resultado: resumo,
     } as Record<string, any>;
 
-    emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_USER_ID)
+    safeEmailSend(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_USER_ID)
   .then(() => { setMensagem(t('messages.submitSuccess')); setMensagemTipo('sucesso'); })
   .catch((error) => { setMensagem(t('messages.submitEmailError')); setMensagemTipo('erro'); console.error(error); });
 

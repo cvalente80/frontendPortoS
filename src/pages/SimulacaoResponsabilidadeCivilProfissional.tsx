@@ -1,7 +1,6 @@
 import React, { useRef, useState, ChangeEvent, FormEvent } from "react";
 import Seo from "../components/Seo";
-import emailjs from "@emailjs/browser";
-import { EMAILJS_SERVICE_ID_GENERIC, EMAILJS_TEMPLATE_ID_GENERIC, EMAILJS_USER_ID_GENERIC } from "../emailjs.config";
+import { safeEmailSend, EMAILJS_SERVICE_ID_GENERIC, EMAILJS_TEMPLATE_ID_GENERIC, EMAILJS_USER_ID_GENERIC } from "../emailjs.config";
 import { useAuth } from '../context/AuthContext';
 import { useAuthUX } from '../context/AuthUXContext';
 import { auth } from '../firebase';
@@ -177,7 +176,7 @@ export default function SimulacaoResponsabilidadeCivilProfissional() {
         }
       }
   console.log('[EmailJS][RCProf] Sending', { service: EMAILJS_SERVICE_ID_GENERIC, template: EMAILJS_TEMPLATE_ID_GENERIC });
-  await emailjs.send(EMAILJS_SERVICE_ID_GENERIC, EMAILJS_TEMPLATE_ID_GENERIC, templateParams, EMAILJS_USER_ID_GENERIC);
+  await safeEmailSend(EMAILJS_SERVICE_ID_GENERIC, EMAILJS_TEMPLATE_ID_GENERIC, templateParams, EMAILJS_USER_ID_GENERIC);
   console.log('[EmailJS][RCProf] Success');
       setMensagem('Pedido enviado com sucesso!'); setMensagemTipo('sucesso'); setStep(1);
     } catch (err) {

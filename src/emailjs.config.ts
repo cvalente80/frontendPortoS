@@ -1,3 +1,27 @@
+import emailjs from '@emailjs/browser';
+
+/**
+ * Wrapper seguro para emailjs.send — em localhost não envia email (apenas loga),
+ * para não gastar o limite de envios durante desenvolvimento.
+ */
+export function safeEmailSend(
+  serviceId: string,
+  templateId: string,
+  params: Record<string, unknown>,
+  userId: string
+): Promise<{ status: number; text: string }> {
+  const isLocalhost = typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+
+  if (isLocalhost) {
+    console.info('[EmailJS] 🚫 Localhost detectado — email NÃO enviado (modo dev).');
+    console.info('[EmailJS] service:', serviceId, '| template:', templateId, '| params:', params);
+    return Promise.resolve({ status: 200, text: 'blocked:localhost' });
+  }
+
+  return emailjs.send(serviceId, templateId, params, userId);
+}
+
 // Substitua os valores abaixo pelos seus dados do EmailJS
 export const EMAILJS_SERVICE_ID = "service_g957e2d";
 export const EMAILJS_TEMPLATE_ID = "template_e1b2bg9";

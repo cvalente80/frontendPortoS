@@ -6,8 +6,7 @@ import { getApp } from 'firebase/app';
 import { collection, collectionGroup, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query, Timestamp, updateDoc, deleteField, serverTimestamp } from 'firebase/firestore';
 import { ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { useTranslation } from 'react-i18next';
-import emailjs from '@emailjs/browser';
-import { EMAILJS_SERVICE_ID_GENERIC, EMAILJS_TEMPLATE_ID_NOTIFY, EMAILJS_USER_ID_GENERIC } from '../emailjs.config';
+import { safeEmailSend, EMAILJS_SERVICE_ID_GENERIC, EMAILJS_TEMPLATE_ID_NOTIFY, EMAILJS_USER_ID_GENERIC } from '../emailjs.config';
 import PolicyForm from '../components/PolicyForm';
 import { createOrGetPolicyForSimulation } from '../utils/policies';
 
@@ -133,11 +132,11 @@ export default function MinhasSimulacoes(): React.ReactElement {
             mysimsLink,
           };
           try {
-            await emailjs.send(
-              EMAILJS_SERVICE_ID_GENERIC,
-              EMAILJS_TEMPLATE_ID_NOTIFY,
-              templateParams,
-              EMAILJS_USER_ID_GENERIC
+           await safeEmailSend(
+             EMAILJS_SERVICE_ID_GENERIC,
+             EMAILJS_TEMPLATE_ID_NOTIFY,
+             templateParams,
+             EMAILJS_USER_ID_GENERIC
             );
             showToast(t('mysims:pdf.emailSuccess'), 'success');
           } catch (sendErr) {
@@ -326,9 +325,10 @@ export default function MinhasSimulacoes(): React.ReactElement {
                 const typeOk = filter === 'all' || it.type === filter;
                 const hasPdf = Boolean((it as any)?.pdfUrl);
                 const policySubmitted = Boolean((it as any)?.policySubmitted);
+                const cotacaoConfirmada = Boolean((it as any)?.cotacaoConfirmada);
                 const statusKey = !isAdmin && policySubmitted
                   ? 'simulacao_aprovada_por_si'
-                  : hasPdf
+                  : hasPdf || cotacaoConfirmada
                     ? 'simulacao_enviada'
                     : 'em_processamento';
                 const statusOk = statusFilter === 'all' || statusFilter === statusKey;
@@ -360,9 +360,10 @@ export default function MinhasSimulacoes(): React.ReactElement {
               };
               const hasPdf = Boolean((it as any)?.pdfUrl);
               const policySubmitted = Boolean((it as any)?.policySubmitted);
+              const cotacaoConfirmada = Boolean((it as any)?.cotacaoConfirmada);
               const statusKey: keyof typeof STATUS_MAP = !isAdmin && policySubmitted
                 ? 'simulacao_aprovada_por_si'
-                : hasPdf
+                : hasPdf || cotacaoConfirmada
                   ? 'simulacao_enviada'
                   : 'em_processamento';
               const statusInfo = STATUS_MAP[statusKey];
@@ -412,6 +413,19 @@ export default function MinhasSimulacoes(): React.ReactElement {
                           <div>{t('mysims:detail.postalCode')}: {p.codigoPostal || '-'}</div>
                           <div className="mt-2">{t('mysims:detail.coverages')}: {cob || '-'}</div>
                           <div>{t('mysims:detail.others')}: {outros}</div>
+                          {p.periodicidadeEscolhida && (
+                            <div className="mt-3 pt-3 border-t border-blue-200">
+                              <div className="font-semibold text-blue-700 mb-1">💶 {t('mysims:detail.quotedPrice', 'Cotação obtida')}</div>
+                              <div className="font-bold text-lg text-green-700">{p.premioEscolhido ?? '-'} <span className="text-sm font-normal text-blue-700">/ {p.periodicidadeEscolhida}</span></div>
+                              {p.todosPrecos && (
+                                <div className="mt-1 grid grid-cols-2 gap-x-4 text-xs text-blue-600">
+                                  {Object.entries(p.todosPrecos as Record<string,string>).map(([k, v]) => v ? (
+                                    <span key={k} className={p.periodicidadeEscolhida === k ? 'font-bold text-green-700' : ''}>{k}: {v}</span>
+                                  ) : null)}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       );
                     })()
@@ -638,6 +652,36 @@ export default function MinhasSimulacoes(): React.ReactElement {
                           Avançar para Apólice
                         </button>
                       )}
+                    </div>
+                  )}
+                  {/* Botão "Avançar para Simulação" — visível quando cotação confirmada, sem PDF ainda e sem apólice submetida */}
+                  {!isAdmin && uid && cotacaoConfirmada && !(it as any)?.pdfUrl && !policySubmitted && openPolicyForSimId !== it.id && (
+                    <div className="mt-2">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            const { data } = await createOrGetPolicyForSimulation(uid, it.id, it.type);
+                            const prefill = {
+                              holderName: (it as any)?.payload?.nome || undefined,
+                              nif: (it as any)?.payload?.contribuinte || (it as any)?.payload?.nif || undefined,
+                              email: (it as any)?.payload?.email || undefined,
+                              phone: (it as any)?.payload?.telefone || undefined,
+                              addressStreet: (it as any)?.payload?.moradaTomador || (it as any)?.payload?.morada || undefined,
+                              addressPostalCode: (it as any)?.payload?.codigoPostalTomador || (it as any)?.payload?.codigoPostal || undefined,
+                              addressLocality: (it as any)?.payload?.localidadeTomador || undefined,
+                            };
+                            setPolicyInitialBySim((prev) => ({ ...prev, [it.id]: { ...data, ...prefill } }));
+                            setOpenPolicyForSimId(it.id);
+                          } catch (e) {
+                            console.error('[MinhasSimulacoes] create policy error', e);
+                            showToast('Falha ao preparar simulação', 'error');
+                          }
+                        }}
+                        className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-blue-700 text-white hover:bg-blue-900 text-sm font-medium"
+                      >
+                        Avançar para Apólice
+                      </button>
                     </div>
                   )}
                   {openPolicyForSimId === it.id && uid && (

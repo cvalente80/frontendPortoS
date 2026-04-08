@@ -1,6 +1,5 @@
 import { db } from '../firebase';
-import emailjs from '@emailjs/browser';
-import { EMAILJS_SERVICE_ID_CHAT, EMAILJS_TEMPLATE_ID_CHAT, EMAILJS_USER_ID_CHAT } from '../emailjs.config';
+import { safeEmailSend, EMAILJS_SERVICE_ID_CHAT, EMAILJS_TEMPLATE_ID_CHAT, EMAILJS_USER_ID_CHAT } from '../emailjs.config';
 import {
   doc,
   getDoc,
@@ -142,7 +141,7 @@ export async function addUserMessage(chatId: string, userId: string, text: strin
       const inboxUrl = `${origin}${base}${currentLang}/admin/inbox`;
       const messageBody = `Primeira mensagem: ${text}\n\nAbrir inbox: ${inboxUrl}`;
       try {
-        await emailjs.send(
+        await safeEmailSend(
           EMAILJS_SERVICE_ID_CHAT,
           EMAILJS_TEMPLATE_ID_CHAT,
           { name: displayName, message: messageBody },
