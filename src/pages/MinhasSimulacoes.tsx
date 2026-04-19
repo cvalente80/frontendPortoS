@@ -689,6 +689,7 @@ export default function MinhasSimulacoes(): React.ReactElement {
                       uid={uid}
                       policyId={it.id}
                       initial={policyInitialBySim[it.id]}
+                      submitLabel="Guardar e Avançar"
                       onSaved={async () => {
                         try {
                           const simRef = doc(db, 'users', uid, 'simulations', it.id);

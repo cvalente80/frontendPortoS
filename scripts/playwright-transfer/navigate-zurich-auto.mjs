@@ -91,6 +91,9 @@ const shouldScrapeAccordionBeforeCalcular = finalStepActions.includes('accordion
   || finalStepActions.includes('scrape-accordion-before-calcular')
   || finalStepActions.includes('click-resumo-learned-coberturas-drag-accordion-calcular')
   || finalStepActions.includes('resumo-click-learned-coberturas-drag-accordion-calcular');
+const shouldPauseForGlassUncheck = ['1', 'true', 'yes'].includes(String(process.env.TRANSFER_PAUSE_FOR_GLASS_UNCHECK || '').trim().toLowerCase());
+// Pausa simples após clicar Seguinte (passo 1→2) — sem captura de cliques; 0 = desativado
+const pauseAfterSeguinteMs = Math.max(0, Number.parseInt(String(process.env.TRANSFER_PAUSE_AFTER_SEGUINTE_MS || '0'), 10) || 0);
 const manualCoberturasReceiptClickCount = Math.max(1, Number.parseInt(String(process.env.TRANSFER_COBERTURAS_RECIBOS_MANUAL_CLICK_COUNT || '4'), 10) || 4);
 const manualCoberturasReceiptClickTimeoutMs = Math.max(15000, Number.parseInt(String(process.env.TRANSFER_COBERTURAS_RECIBOS_MANUAL_CLICK_TIMEOUT_MS || '180000'), 10) || 180000);
 const accordionScrapeManualClickCount = Math.max(1, Number.parseInt(String(process.env.TRANSFER_ACCORDION_MANUAL_CLICK_COUNT || '4'), 10) || 4);
@@ -150,6 +153,8 @@ const clienteReadyPollMs = Math.max(40, Number.parseInt(String(process.env.TRANS
 const learnedResumoSelector = String(process.env.TRANSFER_RESUMO_LEARNED_SELECTOR || 'div#Zurich_PT_Theme_wtZurich_PT_Theme_Layout_SideBar_block_WebPatterns_wt24_block_wtColumn1_wtMainContent_wt20_wtItems_wt567_wtContent_wtDivPremios > div.card.OSInline:nth-of-type(2) > div.cardObservacoes:nth-of-type(3) > p:nth-of-type(4) > strong').trim();
 const learnedResumoParentSelector = String(process.env.TRANSFER_RESUMO_LEARNED_PARENT_SELECTOR || 'div#Zurich_PT_Theme_wtZurich_PT_Theme_Layout_SideBar_block_WebPatterns_wt24_block_wtColumn1_wtMainContent_wt20_wtItems_wt567_wtContent_wtDivPremios > div.card.OSInline:nth-of-type(2) > div.cardObservacoes:nth-of-type(3) > p:nth-of-type(4)').trim();
 const learnedResumoText = String(process.env.TRANSFER_RESUMO_LEARNED_TEXT || 'Proteção Jurídica').trim();
+// Seletor aprendido para o card "Opção Base" na página de seleção de planos (Terceiros)
+const learnedBaseCardSelector = String(process.env.TRANSFER_BASE_CARD_SELECTOR || '').trim();
 const manualCoberturasDragCount = Math.max(1, Number.parseInt(String(process.env.TRANSFER_COBERTURAS_MANUAL_DRAG_COUNT || '1'), 10) || 1);
 const manualCoberturasDragTimeoutMs = Math.max(15000, Number.parseInt(String(process.env.TRANSFER_COBERTURAS_MANUAL_DRAG_TIMEOUT_MS || '180000'), 10) || 180000);
 const learnedCoberturasHandleSelector = String(process.env.TRANSFER_COBERTURAS_DRAG_SELECTOR || 'div#Zurich_PT_Theme_wt146_block_WebPatterns_wt24_block_wtColumn1_wtMainContent_wtlr_Objectos_ctl00_wt407_wtItems_wt398_wtContent_wt416_wtLR_Descontos_ctl02_Zurich_PT_Patterns_wt12_block_wtSliderRange > span.ui-slider-handle.ui-state-default.ui-corner-all').trim();
@@ -1343,84 +1348,192 @@ async function pauseAfterCoberturasSlider(page, metaState) {
   return capturedClicks;
 }
 
-async function dragCoberturasSliderStep(page, metaState) {
-  await page.waitForLoadState('domcontentloaded', { timeout: Math.max(2500, finalStepNextPageWaitMs) }).catch(() => null);
-  await page.waitForLoadState('networkidle', { timeout: Math.max(3000, finalStepNextPageWaitMs) }).catch(() => null);
-  await page.waitForTimeout(450);
-
-  const locator = page.locator(learnedCoberturasHandleSelector).first();
-  const count = await locator.count().catch(() => 0);
-  if (!count) {
-    metaState.steps.push(`final-step-coberturas-drag -> handle-not-found (${learnedCoberturasHandleSelector})`);
-    return false;
-  }
-
-  await locator.scrollIntoViewIfNeeded().catch(() => null);
-  const box = await locator.boundingBox().catch(() => null);
+/**
+ * Arrasta um único handle de slider para o extremo direito do seu track.
+ * Retorna informação sobre o drag para logging.
+ */
+async function dragSingleSliderHandle(page, handleLocator, deltaY, dragSteps, metaState, label) {
+  await handleLocator.scrollIntoViewIfNeeded().catch(() => null);
+  const box = await handleLocator.boundingBox().catch(() => null);
   if (!box) {
-    metaState.steps.push('final-step-coberturas-drag -> missing-bounding-box');
-    return false;
+    metaState.steps.push(`${label} -> missing-bounding-box`);
+    return null;
   }
 
   const startX = Math.round(box.x + (box.width / 2));
   const startY = Math.round(box.y + (box.height / 2));
 
-  // Tenta medir o track pai (div.ui-slider) para calcular o fim real do slider
-  // independentemente do viewport — arrasta até ao extremo direito do track
-  const trackBox = await page.evaluate((handleSelector) => {
-    const handle = document.querySelector(handleSelector);
-    if (!handle) return null;
-    // Sobe na árvore até encontrar o contentor do slider (ui-slider ou ui-slider-range parent)
-    let el = handle.parentElement;
+  // Medir o track pai para calcular o limite direito real
+  // Estratégia 1: subir pelo parentElement do handle diretamente (mais fiável)
+  // Estratégia 2: elementFromPoint → subir pelo DOM à procura de ui-slider
+  const trackBox = await handleLocator.evaluate((handleEl) => {
+    // Subir até encontrar um elemento com ui-slider ou ui-slider-horizontal,
+    // ou até ao pai imediato (que é sempre o contentor do slider)
+    let el = handleEl.parentElement;
     while (el && el !== document.body) {
-      if (el.classList.contains('ui-slider') || el.classList.contains('ui-slider-horizontal')) {
+      if (
+        el.classList.contains('ui-slider') ||
+        el.classList.contains('ui-slider-horizontal') ||
+        el.classList.contains('SliderRange') ||
+        (el.id && el.id.toLowerCase().includes('slider'))
+      ) {
         const r = el.getBoundingClientRect();
         return { x: r.x, y: r.y, width: r.width, height: r.height };
       }
+      // Se o pai imediato tem handles dentro, usa-o diretamente
+      if (el === handleEl.parentElement && el.querySelectorAll('span.ui-slider-handle').length >= 1) {
+        const r = el.getBoundingClientRect();
+        if (r.width > 20) return { x: r.x, y: r.y, width: r.width, height: r.height };
+      }
       el = el.parentElement;
     }
-    // fallback: pai direto do handle
-    const p = handle.parentElement;
-    if (!p) return null;
-    const r = p.getBoundingClientRect();
-    return { x: r.x, y: r.y, width: r.width, height: r.height };
-  }, learnedCoberturasHandleSelector).catch(() => null);
+    // Fallback: usar o pai direto do handle
+    const parent = handleEl.parentElement;
+    if (parent) {
+      const r = parent.getBoundingClientRect();
+      if (r.width > 20) return { x: r.x, y: r.y, width: r.width, height: r.height };
+    }
+    return null;
+  }).catch(() => null);
 
   let endX;
-  let endY = startY + learnedCoberturasDragDeltaY;
+  const endY = startY + deltaY;
 
   if (trackBox && trackBox.width > 0) {
-    // Arrasta até 4px antes do limite direito do track
-    endX = Math.round(trackBox.x + trackBox.width - 4);
-    metaState.steps.push(`final-step-coberturas-drag -> track-measured width=${trackBox.width} trackRight=${Math.round(trackBox.x + trackBox.width)}`);
+    // -2 px de margem (em vez de -4) para garantir que chega mesmo ao extremo
+    endX = Math.round(trackBox.x + trackBox.width - 2);
+    metaState.steps.push(`${label} -> track-measured width=${trackBox.width} trackRight=${Math.round(trackBox.x + trackBox.width)}`);
   } else {
-    // Fallback: usa o delta configurado (env var ou default)
     endX = startX + learnedCoberturasDragDeltaX;
-    metaState.steps.push(`final-step-coberturas-drag -> track-not-measured, using deltaX=${learnedCoberturasDragDeltaX}`);
+    metaState.steps.push(`${label} -> track-not-measured, using deltaX=${learnedCoberturasDragDeltaX}`);
   }
 
   await page.mouse.move(startX, startY);
   await page.mouse.down();
-  await page.mouse.move(endX, endY, { steps: learnedCoberturasDragSteps });
+  await page.mouse.move(endX, endY, { steps: dragSteps });
   await page.mouse.up();
 
   const actualDeltaX = endX - startX;
-  metaState.learnedCoberturasDrag = {
-    selector: learnedCoberturasHandleSelector,
-    startX,
-    startY,
-    endX,
-    endY,
-    deltaX: actualDeltaX,
-    deltaY: learnedCoberturasDragDeltaY,
-    steps: learnedCoberturasDragSteps,
-    trackBox: trackBox || null,
-  };
-  metaState.steps.push(`final-step-coberturas-drag -> success (${startX},${startY} -> ${endX},${endY} deltaX=${actualDeltaX})`);
+  metaState.steps.push(`${label} -> success (${startX},${startY} -> ${endX},${endY} deltaX=${actualDeltaX})`);
+  return { startX, startY, endX, endY, deltaX: actualDeltaX, deltaY: deltaY, trackBox: trackBox || null };
+}
+
+/**
+ * Arrasta TODOS os sliders de desconto na página Coberturas para o extremo direito.
+ * A Zurich tem tipicamente 3 sliders: Débito Direto, Desconto Comercial, Cliente Digital.
+ * Usa o seletor aprendido (learnedCoberturasHandleSelector) para encontrar o primeiro,
+ * depois descobre todos os handles dentro da mesma secção de Descontos.
+ */
+async function dragCoberturasSliderStep(page, metaState) {
+  await page.waitForLoadState('domcontentloaded', { timeout: Math.max(2500, finalStepNextPageWaitMs) }).catch(() => null);
+  await page.waitForLoadState('networkidle', { timeout: Math.max(3000, finalStepNextPageWaitMs) }).catch(() => null);
+  await page.waitForTimeout(450);
+
+  // Encontrar todos os handles de slider dentro da secção de Descontos
+  // Estratégia: procurar todos os ui-slider-handle dentro do container que contém "Descontos"
+  const allHandleSelectors = await page.evaluate((primarySelector) => {
+    // Tentar encontrar a secção de Descontos pelo texto
+    const allEls = Array.from(document.querySelectorAll('*'));
+    let descontosContainer = null;
+    for (const el of allEls) {
+      if (el.children.length === 0 && (el.textContent || '').trim() === 'Descontos') {
+        // Subir até encontrar um container com vários sliders
+        let parent = el.parentElement;
+        for (let i = 0; i < 10; i++) {
+          if (!parent) break;
+          const handles = parent.querySelectorAll('span.ui-slider-handle');
+          if (handles.length >= 2) { descontosContainer = parent; break; }
+          parent = parent.parentElement;
+        }
+        if (descontosContainer) break;
+      }
+    }
+
+    if (descontosContainer) {
+      const handles = Array.from(descontosContainer.querySelectorAll('span.ui-slider-handle'));
+      return handles.map((h) => {
+        // Construir seletor único via ID do pai ou índice
+        const slider = h.closest('[id]');
+        if (slider && slider.id) {
+          const idx = Array.from(slider.querySelectorAll('span.ui-slider-handle')).indexOf(h);
+          return `#${CSS.escape(slider.id)} > span.ui-slider-handle${idx > 0 ? `:nth-of-type(${idx + 1})` : ''}`;
+        }
+        return null;
+      }).filter(Boolean);
+    }
+
+    // Fallback: usar o seletor aprendido — encontrar todos os handles com o mesmo padrão de classe
+    const primary = document.querySelector(primarySelector);
+    if (!primary) return [];
+    // Subir até encontrar o contentor de descontos mais próximo com vários handles
+    let container = primary.parentElement;
+    for (let i = 0; i < 15; i++) {
+      if (!container) break;
+      const handles = container.querySelectorAll('span.ui-slider-handle.ui-state-default.ui-corner-all');
+      if (handles.length >= 2) {
+        return Array.from(handles).map((h) => {
+          const slider = h.closest('[id]');
+          if (slider && slider.id) return `#${CSS.escape(slider.id)} > span.ui-slider-handle`;
+          return null;
+        }).filter(Boolean);
+      }
+      container = container.parentElement;
+    }
+    return [primarySelector]; // último recurso: só o primário
+  }, learnedCoberturasHandleSelector).catch(() => [learnedCoberturasHandleSelector]);
+
+  const selectors = allHandleSelectors.length > 0 ? allHandleSelectors : [learnedCoberturasHandleSelector];
+  metaState.steps.push(`final-step-coberturas-drag -> found ${selectors.length} slider handle(s)`);
+
+  const dragResults = [];
+  for (let i = 0; i < selectors.length; i++) {
+    const sel = selectors[i];
+    const locator = page.locator(sel).first();
+    const count = await locator.count().catch(() => 0);
+    if (!count) {
+      metaState.steps.push(`final-step-coberturas-drag -> handle-${i + 1}-not-found (${sel})`);
+      continue;
+    }
+    const result = await dragSingleSliderHandle(
+      page, locator,
+      learnedCoberturasDragDeltaY, learnedCoberturasDragSteps,
+      metaState, `final-step-coberturas-drag-${i + 1}/${selectors.length}`
+    );
+    if (result) {
+      dragResults.push({ selector: sel, ...result });
+      // Pequena pausa entre drags para a página processar
+      await page.waitForTimeout(350);
+    }
+  }
+
+  // Se não encontrou nenhum pela descoberta automática, fallback para o seletor aprendido
+  if (dragResults.length === 0) {
+    metaState.steps.push(`final-step-coberturas-drag -> fallback to learned selector`);
+    const locator = page.locator(learnedCoberturasHandleSelector).first();
+    const count = await locator.count().catch(() => 0);
+    if (!count) {
+      metaState.steps.push(`final-step-coberturas-drag -> handle-not-found (${learnedCoberturasHandleSelector})`);
+      return false;
+    }
+    const result = await dragSingleSliderHandle(
+      page, locator,
+      learnedCoberturasDragDeltaY, learnedCoberturasDragSteps,
+      metaState, 'final-step-coberturas-drag'
+    );
+    if (result) {
+      dragResults.push({ selector: learnedCoberturasHandleSelector, ...result });
+    }
+  }
+
+  if (dragResults.length > 0) {
+    // Guardar info do primeiro drag (compatibilidade com código existente)
+    metaState.learnedCoberturasDrag = { selector: dragResults[0].selector, ...dragResults[0] };
+    metaState.learnedCoberturasDrags = dragResults;
+  }
 
   await page.waitForLoadState('networkidle', { timeout: Math.max(3000, learnedCoberturasPostDragWaitMs) }).catch(() => null);
   await page.waitForTimeout(learnedCoberturasPostDragWaitMs);
-  return true;
+  return dragResults.length > 0;
 }
 
 async function clickCoberturasCalcularStep(page, metaState) {
@@ -1877,34 +1990,8 @@ async function expandCoberturasReceiptDetails(page, metaState) {
     metaState.steps.push(`final-step-coberturas-detalhe-recibos -> already-in-dom (${quickDetails.source})`);
     return quickDetails;
   }
-  // Tentativa rápida via DOM evaluate (valores em elementos separados não captados pelo innerText)
-  const quickDom = await page.evaluate(() => {
-    const amountRe = /\b\d{1,3}(?:[.\s]\d{3})*,\d{2}\s*€/g;
-    const periodLabels = [
-      { key: 'anual', re: /\banual/i },
-      { key: 'semestral', re: /\bsemestral/i },
-      { key: 'trimestral', re: /\btrimestral/i },
-      { key: 'mensal', re: /\bmensal/i },
-    ];
-    const found = { anual: null, semestral: null, trimestral: null, mensal: null };
-    for (const el of Array.from(document.querySelectorAll('*'))) {
-      if (el.children.length > 6) continue;
-      const text = (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
-      if (!text || text.length > 300) continue;
-      for (const label of periodLabels) {
-        if (found[label.key] || !label.re.test(text)) continue;
-        const scope = el.parentElement || el;
-        const scopeText = (scope.innerText || scope.textContent || '').replace(/\s+/g, ' ').trim();
-        const amounts = Array.from(scopeText.matchAll(amountRe)).map(m => m[0].trim());
-        if (amounts.length) found[label.key] = amounts[0];
-      }
-    }
-    return found;
-  }).catch(() => null);
-  if (quickDom && Object.values(quickDom).some(Boolean)) {
-    metaState.steps.push(`final-step-coberturas-detalhe-recibos -> already-in-dom-evaluate anual=${quickDom.anual || '-'} mensal=${quickDom.mensal || '-'} trimestral=${quickDom.trimestral || '-'} semestral=${quickDom.semestral || '-'}`);
-    return { ...quickDom, hasAny: true, source: 'dom-evaluate' };
-  }
+  // quickDom early return desativado: precisa sempre de clicar em "Detalhe Recibos" para expandir
+  // o accordion SDD (1ª Recibo Cobrança SDD). Sem o clique, os valores SDD nunca ficam disponíveis.
 
   const detailTargets = await findCoberturasReceiptDetailTargets(page);
   metaState.coberturasReceiptDetailTargets = detailTargets;
@@ -2000,9 +2087,9 @@ async function scrapeAccordionValues(page, metaState) {
   const bodyText = await page.locator('body').innerText().catch(() => '');
   metaState.accordionBodyTextDiag = bodyText ? bodyText.slice(0, 4000) : null;
 
-  // Tentativa 1: painel total já conhecido
+  // Tentativa 1: painel total já conhecido — só usar se contiver 'Cobrança SDD' (accordion expandido)
   const panelText = await page.locator(coberturasTotalPanelSelector).first().innerText().catch(() => '');
-  if (panelText) {
+  if (panelText && /Cobran[çc]a\s+SDD/i.test(panelText)) {
     const details = parseCoberturasReceiptDetails(panelText);
     if (details.hasAny) {
       metaState.steps.push(`accordion-scrape -> panel-selector anual=${details.anual || '-'} mensal=${details.mensal || '-'} trimestral=${details.trimestral || '-'} semestral=${details.semestral || '-'}`);
@@ -2024,50 +2111,95 @@ async function scrapeAccordionValues(page, metaState) {
     const found = { anual: null, semestral: null, trimestral: null, mensal: null };
     const contexts = { anual: null, semestral: null, trimestral: null, mensal: null };
 
-    // Extrai o valor correto de um bloco de texto de periodicidade:
-    // Preferência: valor após "Recibos Seguintes Cobrança SDD" (valor recorrente)
-    // Fallback: primeiro valor monetário encontrado no texto
-    function extractPeriodicityValue(scopeText) {
-      const amounts = Array.from(scopeText.matchAll(amountRe)).map(m => m[0].trim());
-      if (!amounts.length) return null;
-      // Tenta extrair o valor após "Recibos Seguintes"
-      const seguintesMatch = scopeText.match(/Recibos?\s+Seguintes?[^€\d]{0,40}([\d]{1,3}(?:[.\s]\d{3})*,\d{2}\s*€)/i);
-      if (seguintesMatch?.[1]) {
-        const val = seguintesMatch[1].trim();
-        if (val !== '-' && !/^-\s*$/.test(val)) return val;
+    // Extrai AMBOS os valores SDD (Débito Direto) de um bloco de texto de periodicidade.
+    // Estrutura do Zurich: "1ª Recibo Cobrança SDD  <sem SDD>  <com SDD>  Recibos Seguintes Cobrança SDD  <sem SDD>  <com SDD>"
+    // O valor SDD é SEMPRE o último da linha (coluna da direita).
+    function extractBothValues(scopeText) {
+      const amounts = Array.from(scopeText.matchAll(amountRe)).map(m => m[0].trim()).filter(a => !/^-\s*$/.test(a));
+      if (!amounts.length) return { seguintes: null, primeiro: null };
+
+      // Extrair todos os valores após "1ª Recibo Cobrança SDD" até "Recibos Seguintes"
+      const primeiroBlock = scopeText.match(/1[ªa]\s*Recibo\s+Cobran[çc]a\s+SDD\s+((?:[\d.,]+\s*€\s*|-\s*){1,4})/i);
+      let primeiro = null;
+      if (primeiroBlock) {
+        const vals = Array.from(primeiroBlock[1].matchAll(/[\d]{1,3}(?:[.\s]\d{3})*,\d{2}\s*€/g)).map(m => m[0].trim());
+        primeiro = vals.length >= 2 ? vals[vals.length - 1] : (vals[0] || null); // último = SDD
       }
-      // Fallback: primeiro valor numérico (não traço)
-      return amounts.find(a => !/^-\s*$/.test(a)) || null;
+
+      // Extrair todos os valores após "Recibos Seguintes Cobrança SDD"
+      const seguintesBlock = scopeText.match(/Recibos?\s+Seguintes?\s+Cobran[çc]a\s+SDD\s+((?:[\d.,]+\s*€\s*|-\s*){1,4})/i);
+      let seguintes = null;
+      if (seguintesBlock) {
+        const vals = Array.from(seguintesBlock[1].matchAll(/[\d]{1,3}(?:[.\s]\d{3})*,\d{2}\s*€/g)).map(m => m[0].trim());
+        seguintes = vals.length >= 2 ? vals[vals.length - 1] : (vals[0] || null);
+      }
+
+      // Fallback sem "Cobrança SDD" explícito
+      if (!primeiro && !seguintes) {
+        const seguintesSimple = scopeText.match(/Recibos?\s+Seguintes?[^€\d]{0,60}([\d]{1,3}(?:[.\s]\d{3})*,\d{2}\s*€)/i);
+        seguintes = seguintesSimple?.[1]?.trim() || amounts[amounts.length - 1] || null;
+        primeiro = seguintes;
+      }
+      if (!primeiro) primeiro = seguintes;
+      if (!seguintes) seguintes = primeiro;
+      return { seguintes, primeiro };
     }
 
     const allEls = Array.from(document.querySelectorAll('*'));
     for (const el of allEls) {
-      if (el.children.length > 6) continue; // skip containers
+      if (el.children.length > 20) continue; // skip containers muito grandes
       const text = (el.innerText || el.textContent || '').replace(/\s+/g, ' ').trim();
-      if (!text || text.length > 300) continue;
+      if (!text || text.length > 2000) continue;
       for (const label of periodLabels) {
         if (found[label.key]) continue;
         if (!label.re.test(text)) continue;
-        // Usa o scope (pai) para ter o bloco completo com 1º recibo + recibos seguintes
+        // Usar o scope mais amplo (pai) se disponível
         const scope = el.parentElement || el;
-        const scopeText = (scope.innerText || scope.textContent || '').replace(/\s+/g, ' ').trim();
-        const val = extractPeriodicityValue(scopeText.length > 0 && scopeText.length <= 400 ? scopeText : text);
-        if (val) {
-          found[label.key] = val;
-          // Contexto: apenas o bloco desta periodicidade (até à próxima label ou 160 chars)
-          const fullCtx = (scopeText || text);
-          const labelIdx = fullCtx.search(label.re);
-          const ctxSlice = labelIdx >= 0 ? fullCtx.slice(labelIdx, labelIdx + 160) : fullCtx.slice(0, 160);
-          contexts[label.key] = ctxSlice.trim();
+        const rawText = (scope.innerText || scope.textContent || '').replace(/\s+/g, ' ').trim();
+        const useText = rawText.length > 0 && rawText.length <= 3000 ? rawText : text;
+        // Clipar ao bloco desta periodicidade: do label até ao próximo label diferente
+        const labelIdx = useText.search(label.re);
+        let clipped = useText;
+        if (labelIdx >= 0) {
+          const afterLabel = useText.slice(labelIdx);
+          const nextPerRe = /\b(Anual|Semestral|Trimestral|Mensal)\b/gi;
+          nextPerRe.lastIndex = 1;
+          let nextIdx = afterLabel.length;
+          let mm;
+          while ((mm = nextPerRe.exec(afterLabel)) !== null) {
+            if (mm.index > 0 && !label.re.test(mm[0])) { nextIdx = mm.index; break; }
+          }
+          clipped = afterLabel.slice(0, Math.min(nextIdx, 400));
+        }
+        // Só aceitar se o texto contém 'Cobrança SDD' — garante que veio do accordion expandido
+        if (!/Cobran[çc]a\s+SDD/i.test(clipped)) continue;
+        const both = extractBothValues(clipped);
+        if (both.seguintes || both.primeiro) {
+          found[label.key] = both.seguintes || both.primeiro;
+          if (label.key !== 'anual' && both.primeiro && both.primeiro !== both.seguintes) {
+            found[`${label.key}_primeiro`] = both.primeiro;
+          }
+          const ctxIdx = clipped.search(label.re);
+          contexts[label.key] = (ctxIdx >= 0 ? clipped.slice(ctxIdx, ctxIdx + 200) : clipped.slice(0, 200)).trim();
         }
       }
+      // Se já encontrámos todos, parar
+      if (Object.values(found).filter(Boolean).length >= 4) break;
     }
     return { found, contexts, hasAny: Object.values(found).some(Boolean) };
   }).catch(() => null);
 
   if (domResult?.hasAny) {
-    metaState.steps.push(`accordion-scrape -> dom-evaluate anual=${domResult.found.anual || '-'} mensal=${domResult.found.mensal || '-'} trimestral=${domResult.found.trimestral || '-'} semestral=${domResult.found.semestral || '-'}`);
-    metaState.accordionValues = { anual: domResult.found.anual || null, mensal: domResult.found.mensal || null, trimestral: domResult.found.trimestral || null, semestral: domResult.found.semestral || null };
+    metaState.steps.push(`accordion-scrape -> dom-evaluate anual=${domResult.found.anual || '-'} mensal=${domResult.found.mensal || '-'} (1º:${domResult.found.mensal_primeiro || '-'}) trimestral=${domResult.found.trimestral || '-'} (1º:${domResult.found.trimestral_primeiro || '-'}) semestral=${domResult.found.semestral || '-'} (1º:${domResult.found.semestral_primeiro || '-'})`);
+    metaState.accordionValues = {
+      anual: domResult.found.anual || null,
+      mensal: domResult.found.mensal || null,
+      mensal_primeiro: domResult.found.mensal_primeiro || null,
+      trimestral: domResult.found.trimestral || null,
+      trimestral_primeiro: domResult.found.trimestral_primeiro || null,
+      semestral: domResult.found.semestral || null,
+      semestral_primeiro: domResult.found.semestral_primeiro || null,
+    };
     metaState.accordionValuesContext = domResult.contexts;
     metaState.accordionRawText = null;
     // Sobrescreve coberturasReceiptDetails com valores correctos (o dom-evaluate anterior pode ter capturado valores errados)
@@ -2412,6 +2544,145 @@ async function clickLearnedResumoStep(page, metaState) {
 
   metaState.steps.push('final-step-click-resumo-learned -> not-found');
   return false;
+}
+
+/**
+ * Pausa na página Coberturas e pede ao utilizador para clicar no elemento
+ * que representa a cobertura de vidros, para aprender o seletor.
+ */
+async function pauseForGlassUncheck(page, metaState) {
+  const pauseShot = path.join(dir, '99-glass-uncheck-pause.png');
+  await page.screenshot({ path: pauseShot, fullPage: false }).catch(() => null);
+  metaState.pauseScreenshot = pauseShot;
+  await updateDebugOverlay(page, 'PAUSADO: clica no checkbox/radio de Quebra de Vidros para o desativar');
+  console.log('[transfer] ⏸  PAUSADO na página Coberturas.');
+  console.log('[transfer]    👆 Clica no elemento de "Quebra de Vidros" (checkbox ou radio) para o desativar.');
+  console.log('[transfer]    O seletor será aprendido e guardado no meta.json.');
+  const payload = await captureSingleUserClickPassive(page, 'glass-uncheck-manual-click', metaState, 120000);
+  if (payload) {
+    metaState.learnedGlassUncheckSelector = payload.selector || null;
+    metaState.learnedGlassUncheckClick = payload;
+    metaState.steps.push(`glass-uncheck-pause -> clique registado: ${payload.selector || 'unknown'} @${payload.x},${payload.y}`);
+    console.log(`[transfer] ✅ Clique registado: ${payload.selector || 'unknown'} @${payload.x},${payload.y}`);
+    console.log('[transfer]    Guarda este seletor em TRANSFER_GLASS_UNCHECK_SELECTOR no .env.playwright.local para automatizar.');
+    // Aguardar recálculo após o clique
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null);
+    await page.waitForTimeout(800);
+  } else {
+    metaState.steps.push('glass-uncheck-pause -> timeout, sem clique');
+    console.log('[transfer] ⚠️  Timeout — sem clique registado.');
+  }
+}
+
+/**
+ * Pausa para o utilizador clicar no card "Opção Base" e aprender o seletor.
+ * Após o clique, aguarda que a página processe a seleção.
+ * O seletor aprendido é guardado no meta e deve ser copiado para TRANSFER_BASE_CARD_SELECTOR.
+ */
+async function pauseAndLearnBaseCardStep(page, metaState) {
+  const pauseShot = path.join(dir, '99-base-card-pause.png');
+  await page.screenshot({ path: pauseShot, fullPage: false }).catch(() => null);
+  metaState.pauseScreenshot = pauseShot;
+  await updateDebugOverlay(page, 'PAUSADO: clica no card "Opção Base" para aprender o seletor');
+  console.log('[transfer] ⏸  PAUSADO na página de seleção de planos.');
+  console.log('[transfer]    👆 Clica no botão "Seleccionar" do card "Opção Base".');
+  console.log('[transfer]    O seletor será aprendido e guardado no meta.json.');
+  console.log('[transfer]    Depois copia o valor de learnedBaseCardSelector para TRANSFER_BASE_CARD_SELECTOR no .env.playwright.local.');
+  const payload = await captureSingleUserClickPassive(page, 'base-card-manual-click', metaState, 120000);
+  if (payload) {
+    metaState.learnedBaseCardSelector = payload.selector || null;
+    metaState.learnedBaseCardClick = payload;
+    metaState.steps.push(`base-card-pause -> clique registado: ${payload.selector || 'unknown'} @${payload.x},${payload.y}`);
+    console.log(`[transfer] ✅ Clique registado: ${payload.selector || 'unknown'} @${payload.x},${payload.y}`);
+    console.log('[transfer]    Copia learnedBaseCardSelector para TRANSFER_BASE_CARD_SELECTOR no .env.playwright.local.');
+    await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => null);
+    await page.waitForTimeout(500);
+    return true;
+  }
+  metaState.steps.push('base-card-pause -> timeout, sem clique');
+  console.log('[transfer] ⚠️  Timeout — sem clique registado.');
+  return false;
+}
+
+/**
+ * Se o utilizador NÃO selecionou "Vidros" nas coberturas adicionais,
+ * desativa a opção "Quebra de Vidros" na página Coberturas da Zurich.
+ * A Zurich apresenta esta cobertura como radio buttons (QV Essencial / Quebra Vidros / QV-Marca)
+ * dentro de uma linha de coberturas complementares. Para desativar, clicamos
+ * no radio já selecionado (toggle-off) ou procuramos uma opção vazia/nenhuma.
+ */
+async function uncheckGlassIfNotRequested(page, metaState, simulationPayload) {
+  const coberturas = Array.isArray(simulationPayload?.coberturas) ? simulationPayload.coberturas : [];
+  // Normalizar: verificar se alguma cobertura inclui "vidro" (PT) ou "glass"/"windscreen" (EN)
+  const wantsGlass = coberturas.some((c) =>
+    String(c).toLowerCase().includes('vidro') ||
+    String(c).toLowerCase().includes('glass') ||
+    String(c).toLowerCase().includes('windscreen') ||
+    String(c).toLowerCase().includes('qv')
+  );
+
+  if (wantsGlass) {
+    metaState.steps.push('coberturas-glass -> requested, skip uncheck');
+    return;
+  }
+
+  // Tentar desativar: procurar o radio/checkbox atualmente selecionado dentro da row de Quebra de Vidros
+  // e clicar nele (toggle-off) ou clicar numa opção "Nenhuma/Sem cobertura"
+  const unchecked = await page.evaluate(() => {
+    // Encontrar o container/row que contém o texto "Quebra de Vidros" ou "QV"
+    const allLabels = Array.from(document.querySelectorAll('label, td, div, span, th'));
+    const glassContainer = allLabels.find((el) => {
+      const txt = (el.textContent || '').trim();
+      return txt === 'Quebra de Vidros' || txt === 'QV Essencial';
+    });
+
+    if (!glassContainer) return { found: false, reason: 'container-not-found' };
+
+    // Subir na árvore para encontrar a row/section
+    let row = glassContainer;
+    for (let i = 0; i < 8; i++) {
+      if (!row.parentElement) break;
+      row = row.parentElement;
+      // Verificar se esta row tem inputs
+      const inputs = Array.from(row.querySelectorAll('input[type="radio"], input[type="checkbox"]'));
+      if (inputs.length > 0) {
+        // Tentar encontrar opção sem valor / vazia (representa "sem cobertura")
+        const emptyOpt = inputs.find((inp) => {
+          const v = String(inp.value || '').trim();
+          return v === '' || v === '0' || v === 'none' || v === 'nenhuma';
+        });
+        if (emptyOpt && !emptyOpt.checked) {
+          emptyOpt.click();
+          return { found: true, action: 'clicked-empty-option', value: emptyOpt.value };
+        }
+
+        // Se for checkbox e estiver checked, clicar para desmarcar
+        const checkedCheckbox = inputs.find((inp) => inp.type === 'checkbox' && inp.checked);
+        if (checkedCheckbox) {
+          checkedCheckbox.click();
+          return { found: true, action: 'unchecked-checkbox' };
+        }
+
+        // Se for radio já selecionado, tentar clicar de novo (alguns toggleiam)
+        const checkedRadio = inputs.find((inp) => inp.type === 'radio' && inp.checked);
+        if (checkedRadio) {
+          // Não há opção vazia, tentar clicar no radio selecionado
+          checkedRadio.click();
+          return { found: true, action: 'clicked-selected-radio', value: checkedRadio.value, note: 'may-not-toggle' };
+        }
+        return { found: true, action: 'no-checked-input-found', inputs: inputs.length };
+      }
+    }
+    return { found: false, reason: 'no-inputs-in-row' };
+  }).catch(() => ({ found: false, reason: 'evaluate-error' }));
+
+  metaState.steps.push(`coberturas-glass -> uncheck result: ${JSON.stringify(unchecked)}`);
+
+  if (unchecked?.found && unchecked?.action !== 'no-checked-input-found') {
+    await page.waitForTimeout(600);
+    // Aguardar recalculo (a página pode fazer AJAX)
+    await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null);
+  }
 }
 
 async function advanceLearnedResumoToCoberturasStep(page, metaState) {
@@ -3090,6 +3361,11 @@ async function selectNamedOptionStep(page, metaState, optionRegex, stepLabel) {
   await page.waitForTimeout(350);
   metaState.steps.push(`${stepLabel} -> success`);
   return true;
+}
+
+async function selectOpcaoBaseStep(page, metaState) {
+  const baseRegex = /Opção\s*Base|Opcao\s*Base/i;
+  return selectNamedOptionStep(page, metaState, baseRegex, 'final-step-select-opcao-base');
 }
 
 async function selectOpcaoEssencialStep(page, metaState) {
@@ -3806,6 +4082,13 @@ try {
   if (shouldAdvanceThirdPartyToCoberturas) {
     await clickFinalSeguinteStep(page, meta);
 
+    if (pauseAfterSeguinteMs > 0) {
+      meta.steps.push(`pause-after-seguinte -> ${pauseAfterSeguinteMs}ms (sem captura)`);
+      console.log(`[transfer] ⏸  Pausa de ${pauseAfterSeguinteMs}ms após Seguinte. Podes fazer cliques manuais — não serão gravados.`);
+      await page.waitForTimeout(pauseAfterSeguinteMs);
+      console.log('[transfer] ▶️  A retomar...');
+    }
+
     if (shouldPauseOnDadosAuto) {
       meta.steps.push('final-step-decision -> pause-after-seguinte-summary');
       await pauseOnDadosAutoForManualInstruction(page, meta);
@@ -3831,6 +4114,13 @@ try {
   } else if (shouldClickSeguinteAndChooseEssencialForThirdParty) {
     await clickFinalSeguinteStep(page, meta);
 
+    if (pauseAfterSeguinteMs > 0) {
+      meta.steps.push(`pause-after-seguinte -> ${pauseAfterSeguinteMs}ms (sem captura)`);
+      console.log(`[transfer] ⏸  Pausa de ${pauseAfterSeguinteMs}ms após Seguinte. Podes fazer cliques manuais — não serão gravados.`);
+      await page.waitForTimeout(pauseAfterSeguinteMs);
+      console.log('[transfer] ▶️  A retomar...');
+    }
+
     if (shouldPauseOnDadosAuto) {
       meta.steps.push('final-step-decision -> pause-after-seguinte-summary');
       await pauseOnDadosAutoForManualInstruction(page, meta);
@@ -3849,6 +4139,13 @@ try {
   } else if (shouldClickFinalSeguinte || shouldPauseOnDadosAuto || shouldClickLearnedResumoAfterSeguinte || shouldAdvanceLearnedResumoToCoberturas || shouldDragCoberturasSlider || shouldCalculateCoberturasAfterDrag || shouldPauseBeforeCoberturasCalculator || shouldPauseBeforeCoberturasReceiptDetails || shouldPauseAfterCoberturasSlider || shouldPauseBeforeAccordionScrape || shouldScrapeAccordionBeforeCalcular || shouldScrapeAccordionAfterSlider) {
     await clickFinalSeguinteStep(page, meta);
 
+    if (pauseAfterSeguinteMs > 0) {
+      meta.steps.push(`pause-after-seguinte -> ${pauseAfterSeguinteMs}ms (sem captura)`);
+      console.log(`[transfer] ⏸  Pausa de ${pauseAfterSeguinteMs}ms após Seguinte. Podes fazer cliques manuais — não serão gravados.`);
+      await page.waitForTimeout(pauseAfterSeguinteMs);
+      console.log('[transfer] ▶️  A retomar...');
+    }
+
     if (shouldPauseOnDadosAuto) {
       meta.steps.push('final-step-decision -> pause-after-seguinte-summary');
       await pauseOnDadosAutoForManualInstruction(page, meta);
@@ -3856,11 +4153,74 @@ try {
     }
 
     if (shouldClickLearnedResumoAfterSeguinte || shouldAdvanceLearnedResumoToCoberturas || shouldDragCoberturasSlider || shouldCalculateCoberturasAfterDrag || shouldPauseBeforeCoberturasCalculator || shouldPauseBeforeCoberturasReceiptDetails || shouldPauseAfterCoberturasSlider || shouldPauseBeforeAccordionScrape || shouldScrapeAccordionBeforeCalcular || shouldScrapeAccordionAfterSlider) {
+      // Para Terceiros: não há página Resumo — selecionar Essencial e avançar para Coberturas diretamente
+      if (isThirdPartyAutoSimulation(simulationPayload)) {
+        meta.steps.push(`final-step-decision -> terceiros-drag-flow (${simulationPayload.tipoSeguro})`);
+        // Selecionar card Base: usar seletor aprendido se disponível, senão pausar para aprender
+        let baseSelected = false;
+        if (learnedBaseCardSelector) {
+          meta.steps.push(`terceiros-drag-flow -> base-card-learned (${learnedBaseCardSelector})`);
+          await page.locator(learnedBaseCardSelector).click({ timeout: 8000 }).catch(() => null);
+          await page.waitForLoadState('networkidle', { timeout: 6000 }).catch(() => null);
+          await page.waitForTimeout(400);
+          baseSelected = true;
+        } else {
+          meta.steps.push('terceiros-drag-flow -> base-card-pause (sem seletor aprendido)');
+          baseSelected = await pauseAndLearnBaseCardStep(page, meta);
+        }
+        if (baseSelected) {
+          const clickedCoberturasNav = await clickCoberturasStepNavigation(page, meta);
+          if (!clickedCoberturasNav) {
+            await clickLowerSeguinteStep(page, meta);
+          }
+          const reachedCoberturas = await waitForCoberturasPage(page, meta);
+          if (!reachedCoberturas) {
+            await navigateDirectlyToCoberturasStep(page, meta);
+          }
+          // Opção Base não inclui Quebra de Vidros — sem necessidade de uncheck
+          if (shouldDragCoberturasSlider || shouldCalculateCoberturasAfterDrag || shouldPauseBeforeCoberturasCalculator || shouldPauseBeforeCoberturasReceiptDetails || shouldPauseAfterCoberturasSlider || shouldPauseBeforeAccordionScrape || shouldScrapeAccordionBeforeCalcular || shouldScrapeAccordionAfterSlider) {
+            meta.steps.push('terceiros-drag-flow -> drag-coberturas-slider');
+            await dragCoberturasSliderStep(page, meta);
+          }
+          if (shouldPauseAfterCoberturasSlider) {
+            meta.steps.push('terceiros-drag-flow -> pause-coberturas-apos-slider');
+            await pauseAfterCoberturasSlider(page, meta);
+            throw new ControlledPauseStop();
+          }
+          if (shouldPauseBeforeCoberturasCalculator) {
+            meta.steps.push('terceiros-drag-flow -> pause-coberturas-calculadora');
+            await pauseBeforeCoberturasCalculator(page, meta);
+            throw new ControlledPauseStop();
+          }
+          if (shouldCalculateCoberturasAfterDrag || shouldPauseBeforeAccordionScrape || shouldScrapeAccordionBeforeCalcular || shouldScrapeAccordionAfterSlider) {
+            meta.steps.push('terceiros-drag-flow -> click-coberturas-calcular');
+            const clickedCalcular = await clickCoberturasCalcularStep(page, meta);
+            if (clickedCalcular) {
+              await waitForCoberturasCalculatedValue(page, meta).catch(() => null);
+            }
+            if (shouldPauseBeforeAccordionScrape || shouldScrapeAccordionBeforeCalcular || shouldScrapeAccordionAfterSlider) {
+              const alreadyHasValues = meta.accordionValues && Object.values(meta.accordionValues).some(Boolean);
+              if (alreadyHasValues) {
+                meta.steps.push('terceiros-drag-flow -> accordion-values-already-captured, skip pause');
+              } else {
+                meta.steps.push('terceiros-drag-flow -> pause-accordion-scrape');
+                await pauseAndScrapeAccordionValues(page, meta);
+              }
+            }
+          }
+        }
+      } else {
       meta.steps.push('final-step-decision -> click-resumo-learned');
       const clickedLearnedResumo = await clickLearnedResumoStep(page, meta);
       if (clickedLearnedResumo && (shouldAdvanceLearnedResumoToCoberturas || shouldDragCoberturasSlider || shouldCalculateCoberturasAfterDrag || shouldPauseBeforeCoberturasCalculator || shouldPauseBeforeCoberturasReceiptDetails || shouldPauseAfterCoberturasSlider || shouldPauseBeforeAccordionScrape || shouldScrapeAccordionBeforeCalcular || shouldScrapeAccordionAfterSlider)) {
         meta.steps.push('final-step-decision -> click-resumo-learned-coberturas');
         await advanceLearnedResumoToCoberturasStep(page, meta);
+        // Pausa manual para aprender o seletor de Vidros (apenas quando TRANSFER_PAUSE_FOR_GLASS_UNCHECK=true)
+        if (shouldPauseForGlassUncheck) {
+          await pauseForGlassUncheck(page, meta);
+        }
+        // Desativar Quebra de Vidros se não foi pedida pelo utilizador
+        await uncheckGlassIfNotRequested(page, meta, simulationPayload);
         if (shouldDragCoberturasSlider || shouldCalculateCoberturasAfterDrag || shouldPauseBeforeCoberturasCalculator || shouldPauseBeforeCoberturasReceiptDetails || shouldPauseAfterCoberturasSlider || shouldPauseBeforeAccordionScrape || shouldScrapeAccordionBeforeCalcular || shouldScrapeAccordionAfterSlider) {
           meta.steps.push('final-step-decision -> drag-coberturas-slider');
           await dragCoberturasSliderStep(page, meta);
@@ -3893,6 +4253,7 @@ try {
           }
         }
       }
+      } // end else (non-third-party resumo flow)
     }
   }
 

@@ -8,6 +8,7 @@ export type SimulationRecord = {
   title?: string;
   summary?: string;
   status?: string; // 'submitted' | 'quoted' | 'archived' | ...
+  cotacaoConfirmada?: boolean;
   payload?: any;   // raw form data or selected fields
   createdAt?: any; // serverTimestamp will set this
 };

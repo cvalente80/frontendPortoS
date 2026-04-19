@@ -6,7 +6,7 @@ import { enGB } from "date-fns/locale/en-GB";
 import "react-datepicker/dist/react-datepicker.css";
 import { safeEmailSend, EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_USER_ID } from "../emailjs.config";
 import { Trans, useTranslation } from 'react-i18next';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useAuthUX } from '../context/AuthUXContext';
 import { auth, db } from '../firebase';
@@ -40,6 +40,7 @@ export default function SimulacaoAuto() {
   const { t } = useTranslation('sim_auto');
   const { lang } = useParams();
   const base = lang === 'en' ? 'en' : 'pt';
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { requireAuth } = useAuthUX();
   const [step, setStep] = useState<number>(() => {
@@ -76,7 +77,7 @@ export default function SimulacaoAuto() {
     sessionStorage.getItem('sim_auto_job_id')
   );
   const [simulationResult, setSimulationResult] = useState<{
-    accordionValues?: { anual?: string | null; semestral?: string | null; trimestral?: string | null; mensal?: string | null } | null;
+    accordionValues?: { anual?: string | null; semestral?: string | null; semestral_primeiro?: string | null; trimestral?: string | null; trimestral_primeiro?: string | null; mensal?: string | null; mensal_primeiro?: string | null } | null;
     coberturasPremiumTotal?: string | null;
     status?: string;
   } | null>(null);
@@ -97,10 +98,10 @@ export default function SimulacaoAuto() {
   // Listener em tempo real ao job de transferência — actualiza simulationResult quando o Playwright terminar
   useEffect(() => {
     if (!transferJobId) return;
-    // Timeout de 7 minutos — se o script não terminar, mostra erro
+    // Timeout de 2,5 minutos — se o script não terminar, mostra erro
     const timeoutId = setTimeout(() => {
       setSimulationResult({ status: 'failed' });
-    }, 7 * 60 * 1000);
+    }, 2.5 * 60 * 1000);
     const unsub = onSnapshot(doc(db, 'simulationTransferJobs', transferJobId), (snap) => {
       if (!snap.exists()) return;
       const data = snap.data();
@@ -135,6 +136,12 @@ export default function SimulacaoAuto() {
       const checked = (target as HTMLInputElement).checked;
 
       setForm((prev) => {
+        const isThirdParty = prev.tipoSeguro === t('typeThirdParty');
+        const mandatory = isThirdParty
+          ? [t('coverageLabels.occupants'), t('coverageLabels.assistance')]
+          : [];
+        // Impedir des-seleção de coberturas obrigatórias
+        if (!checked && mandatory.includes(value)) return prev;
         const coberturas = checked
           ? [...prev.coberturas, value]
           : prev.coberturas.filter((c) => c !== value);
@@ -145,10 +152,9 @@ export default function SimulacaoAuto() {
         const thirdParty = t('typeThirdParty');
         const ownDamage = t('typeOwnDamage');
         if (value === thirdParty) {
-          // Pré-selecionar Ocupantes, Vidros e Assistência em Viagem
+          // Pré-selecionar Ocupantes e Assistência em Viagem (obrigatórias)
           const defaults = [
             t('coverageLabels.occupants'),
-            t('coverageLabels.glass'),
             t('coverageLabels.assistance'),
           ];
           setForm(prev => ({ ...prev, tipoSeguro: value, coberturas: defaults }));
@@ -808,9 +814,9 @@ export default function SimulacaoAuto() {
 <label className="block font-semibold mb-2">{t('additionalCoverages')}</label>
               {form.tipoSeguro === t('typeThirdParty') && (
   <div className="flex flex-col gap-2">
-    <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value={t('coverageLabels.occupants')} checked={form.coberturas.includes(t('coverageLabels.occupants'))} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.occupants')}</label>
+    <label className="inline-flex items-center gap-2 cursor-not-allowed" title="Cobertura obrigatória"><input type="checkbox" name="coberturas" value={t('coverageLabels.occupants')} checked disabled className="as-checkbox" /> {t('coverageLabels.occupants')} <span className="text-xs text-blue-500 font-medium">(incluído)</span></label>
     <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value={t('coverageLabels.glass')} checked={form.coberturas.includes(t('coverageLabels.glass'))} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.glass')}</label>
-    <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value={t('coverageLabels.assistance')} checked={form.coberturas.includes(t('coverageLabels.assistance'))} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.assistance')}</label>
+    <label className="inline-flex items-center gap-2 cursor-not-allowed" title="Cobertura obrigatória"><input type="checkbox" name="coberturas" value={t('coverageLabels.assistance')} checked disabled className="as-checkbox" /> {t('coverageLabels.assistance')} <span className="text-xs text-blue-500 font-medium">(incluído)</span></label>
     <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value={t('coverageLabels.fire')} checked={form.coberturas.includes(t('coverageLabels.fire'))} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.fire')}</label>
     <label className="inline-flex items-center gap-2"><input type="checkbox" name="coberturas" value={t('coverageLabels.theft')} checked={form.coberturas.includes(t('coverageLabels.theft'))} onChange={handleChange} className="as-checkbox" /> {t('coverageLabels.theft')}</label>
   </div>
@@ -904,12 +910,13 @@ export default function SimulacaoAuto() {
                   </p>
                   <div className="grid grid-cols-2 gap-3">
                     {([
-                      { key: 'anual',      label: base === 'en' ? 'Annual'      : 'Anual',      icon: '📅', value: simulationResult.coberturasPremiumTotal ?? simulationResult.accordionValues?.['anual'] },
-                      { key: 'semestral',  label: base === 'en' ? 'Semi-annual' : 'Semestral',  icon: '🗓️', value: simulationResult.accordionValues?.['semestral'] },
-                      { key: 'trimestral', label: base === 'en' ? 'Quarterly'   : 'Trimestral', icon: '📆', value: simulationResult.accordionValues?.['trimestral'] },
-                      { key: 'mensal',     label: base === 'en' ? 'Monthly'     : 'Mensal',     icon: '💳', value: simulationResult.accordionValues?.['mensal'] },
-                    ] as const).map(({ key, label, icon, value }) => {
+                      { key: 'anual',      label: base === 'en' ? 'Annual'      : 'Anual',      icon: '📅', value: simulationResult.coberturasPremiumTotal ?? simulationResult.accordionValues?.['anual'],      primeiro: null },
+                      { key: 'semestral',  label: base === 'en' ? 'Semi-annual' : 'Semestral',  icon: '🗓️', value: simulationResult.accordionValues?.['semestral'],   primeiro: simulationResult.accordionValues?.['semestral_primeiro'] },
+                      { key: 'trimestral', label: base === 'en' ? 'Quarterly'   : 'Trimestral', icon: '📆', value: simulationResult.accordionValues?.['trimestral'],  primeiro: simulationResult.accordionValues?.['trimestral_primeiro'] },
+                      { key: 'mensal',     label: base === 'en' ? 'Monthly'     : 'Mensal',     icon: '💳', value: simulationResult.accordionValues?.['mensal'],       primeiro: simulationResult.accordionValues?.['mensal_primeiro'] },
+                    ] as const).map(({ key, label, icon, value, primeiro }) => {
                       const isSelected = selectedPeriodicity === key;
+                      const hasDualValue = primeiro && primeiro !== value;
                       return (
                         <button
                           key={key}
@@ -925,9 +932,26 @@ export default function SimulacaoAuto() {
                         >
                           <span className="text-2xl mb-1">{icon}</span>
                           <span className="text-xs text-gray-500 font-semibold uppercase tracking-wide">{label}</span>
-                          <span className={`text-xl font-bold mt-1 ${isSelected ? 'text-blue-700' : key === 'anual' ? 'text-green-700' : 'text-blue-900'}`}>
-                            {value ?? '—'}
-                          </span>
+                          {hasDualValue ? (
+                            <div className="flex flex-col items-center mt-1 gap-0.5 w-full">
+                              <div className="flex flex-col items-center">
+                                <span className="text-[10px] text-gray-400 leading-tight">
+                                  {key === 'mensal'
+                                    ? (base === 'en' ? '1st receipt (3 months)' : '1º recibo (3 meses)')
+                                    : (base === 'en' ? '1st receipt' : '1º recibo')}
+                                </span>
+                                <span className={`text-lg font-bold ${isSelected ? 'text-blue-700' : 'text-blue-900'}`}>{primeiro}</span>
+                              </div>
+                              <div className="flex flex-col items-center border-t border-dashed border-gray-200 pt-0.5 w-full">
+                                <span className="text-[10px] text-gray-400 leading-tight">{base === 'en' ? 'following' : 'seguintes'}</span>
+                                <span className={`text-base font-semibold ${isSelected ? 'text-blue-600' : 'text-blue-800'}`}>{value ?? '—'}</span>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className={`text-xl font-bold mt-1 ${isSelected ? 'text-blue-700' : key === 'anual' ? 'text-green-700' : 'text-blue-900'}`}>
+                              {value ?? '—'}
+                            </span>
+                          )}
                           {isSelected && (
                             <span className="mt-1 text-xs font-semibold text-blue-600">✓ {base === 'en' ? 'Selected' : 'Selecionado'}</span>
                           )}
@@ -963,8 +987,8 @@ export default function SimulacaoAuto() {
                                 title: `${form.marca || ''} ${form.modelo || ''}`.trim() || 'Auto',
                                 summary: `${form.tipoSeguro} · ${form.matricula} · ${selectedPeriodicity} ${chosenValue ?? ''}`.trim(),
                                 status: 'quoted',
-                                cotacaoConfirmada: true,
                                 payload: {
+                                  cotacaoConfirmada: true,
                                   email: form.email,
                                   nome: form.nome,
                                   contribuinte: form.contribuinte,
@@ -987,9 +1011,15 @@ export default function SimulacaoAuto() {
                               }, { idempotencyKey: `${transferJobId}:choice:${selectedPeriodicity}` });
                             }
                             setChoiceSaved(true);
+                            sessionStorage.removeItem('sim_auto_step');
+                            sessionStorage.removeItem('sim_auto_job_id');
+                            navigate(`/${base}/minhas-simulacoes`);
                           } catch (e) {
                             console.warn('[SimulacaoAuto] Falha a guardar escolha (ignorado):', e);
                             setChoiceSaved(true);
+                            sessionStorage.removeItem('sim_auto_step');
+                            sessionStorage.removeItem('sim_auto_job_id');
+                            navigate(`/${base}/minhas-simulacoes`);
                           } finally {
                             setIsSavingChoice(false);
                           }
