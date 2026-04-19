@@ -57,8 +57,12 @@ function getFirebaseConfig() {
   return { apiKey, authDomain, projectId, storageBucket, messagingSenderId, appId };
 }
 
-const app = getApps().length ? getApp() : initializeApp(getFirebaseConfig());
+const firebaseConfig = getFirebaseConfig();
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
+
+console.log(`[watcher] 🔥 Firebase projectId: ${firebaseConfig.projectId}`);
+console.log(`[watcher] 🌐 Modo: ${process.env.WATCHER_ENV ?? 'local'} | headless: ${process.env.PW_HEADLESS ?? 'true'} | max-concurrent: ${MAX_CONCURRENT}`);
 
 // Conjunto de jobIds já em processamento (evita arrancar o mesmo job duas vezes)
 const activeJobs = new Set();
@@ -89,7 +93,8 @@ async function claimAndLaunchJob(jobId) {
   const envVars = {
     ...process.env,
     TRANSFER_JOB_ID: jobId,
-    TRANSFER_SOURCE_PREFERENCE: process.env.TRANSFER_SOURCE_PREFERENCE ?? 'firestore',
+    // O watcher processa sempre jobs vindos do Firestore — nunca usar localhost como fonte
+    TRANSFER_SOURCE_PREFERENCE: 'firestore',
     TRANSFER_VEHICLE_RESULT_INDEX: '1',
     TRANSFER_VEHICLE_PREFERRED_SELECTOR:
       'table#Zurich_PT_Theme_wtZurich_PT_Theme_Layout_SideBar_block_WebPatterns_wt24_block_wtColumn1_wtMainContent_wt20_wtItems_wt893_wtContent_wt350_wtMessage_wttr_Versoes > tbody > tr:nth-of-type(2) > td.TableRecords_EvenLine:nth-of-type(1) > div',
@@ -100,8 +105,9 @@ async function claimAndLaunchJob(jobId) {
     TRANSFER_MATRICULA_LUPA_CLICKS: '2',
     TRANSFER_MATRICULA_FOCUS_CLICKS: '4',
     TRANSFER_MATRICULA_FOCUS_CLICK_GAP_MS: '50',
-    PW_HEADLESS: process.env.PW_HEADLESS ?? 'true',
-    PW_SLOW_MO: process.env.PW_SLOW_MO ?? '0',
+    // Forçar headless=true e slowMo=0 — o watcher corre em background, nunca com UI
+    PW_HEADLESS: 'true',
+    PW_SLOW_MO: '0',
   };
 
   const scriptPath = path.join(__dirname, 'navigate-zurich-auto.mjs');
@@ -204,7 +210,7 @@ function startListener() {
   }
 
   console.log('[watcher] 👀 A escutar novos jobs em simulationTransferJobs (status=queued, type=auto)...');
-  console.log(`[watcher] Máximo de jobs simultâneos: ${MAX_CONCURRENT}`);
+  console.log(`[watcher] Máximo de jobs simultâneos: ${MAX_CONCURRENT} | fonte: firestore | projectId: ${firebaseConfig.projectId}`);
 
   currentUnsubscribe = onSnapshot(
     q,
