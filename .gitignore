@@ -32,3 +32,4 @@ artifacts/
 !/.env.example
 !/.env.example
 .env.playwright.local
+logs/

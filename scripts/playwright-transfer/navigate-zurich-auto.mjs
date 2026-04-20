@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { collection, collectionGroup, doc, getDocs, getFirestore, limit, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+import { collection, collectionGroup, doc, getDoc, getDocs, getFirestore, limit, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 
 const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 const dir = path.resolve(process.cwd(), 'artifacts', 'playwright-transfer', `zurich-auto-flow-${stamp}`);
@@ -4288,6 +4288,27 @@ try {
           },
         });
         meta.steps.push(`firestore-job-update -> completed (jobId=${jobId})`);
+
+        // Atualizar a simulação original com cotacaoConfirmada=true
+        // para que MinhasSimulacoes mostre "Simulação recebida" em vez de "Em processamento"
+        try {
+          const jobSnap = await getDoc(doc(fbDb, 'simulationTransferJobs', jobId));
+          const jobData = jobSnap.exists() ? jobSnap.data() : null;
+          const simUid = jobData?.uid;
+          const simId = jobData?.sourceSimulationId;
+          if (simUid && simId) {
+            await updateDoc(doc(fbDb, 'users', simUid, 'simulations', simId), {
+              cotacaoConfirmada: true,
+              updatedAt: serverTimestamp(),
+            });
+            meta.steps.push(`firestore-simulation-update -> cotacaoConfirmada=true (uid=${simUid}, simId=${simId})`);
+          } else {
+            meta.steps.push(`firestore-simulation-update -> skipped (uid=${simUid ?? 'null'}, simId=${simId ?? 'null'})`);
+          }
+        } catch (simErr) {
+          console.warn('[transfer] Falha ao marcar cotacaoConfirmada na simulação:', simErr?.message);
+          meta.steps.push(`firestore-simulation-update -> error: ${simErr?.message}`);
+        }
       } else {
         await updateDoc(doc(fbDb, 'simulationTransferJobs', jobId), {
           status: 'failed',

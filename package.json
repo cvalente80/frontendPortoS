@@ -53,7 +53,7 @@
     "pw:validate:local-to-zurich:headed": "PW_HEADLESS=false PW_SLOW_MO=20 node scripts/playwright-transfer/fill-local-auto-simulation.mjs && TRANSFER_SOURCE_PREFERENCE=localhost TRANSFER_MATRICULA_LUPA_CLICKS=2 PW_HEADLESS=false PW_SLOW_MO=20 node --env-file=.env.local --env-file=.env.playwright.local scripts/playwright-transfer/navigate-zurich-auto.mjs",
     "pw:watcher": "node --env-file=.env.local --env-file=.env.playwright.local scripts/playwright-transfer/local-queue-watcher.mjs",
     "pw:watcher:headless": "PW_HEADLESS=true PW_SLOW_MO=0 node --env-file=.env.local --env-file=.env.playwright.local scripts/playwright-transfer/local-queue-watcher.mjs",
-    "pw:watcher:prod": "WATCHER_ENV=production node --env-file=.env.playwright.prod scripts/playwright-transfer/local-queue-watcher.mjs"
+    "pw:watcher:prod": "WATCHER_ENV=production node --env-file=.env.local --env-file=.env.playwright.prod scripts/playwright-transfer/local-queue-watcher.mjs"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
