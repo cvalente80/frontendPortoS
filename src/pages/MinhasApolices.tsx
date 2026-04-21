@@ -82,12 +82,17 @@ export default function MinhasApolices(): React.ReactElement {
     setLoading(true);
     (async () => {
       try {
+        const sortByCreatedAt = (a: PolicyItem, b: PolicyItem) => {
+          const tsA = (a as any)?.createdAt?.seconds ?? 0;
+          const tsB = (b as any)?.createdAt?.seconds ?? 0;
+          return tsB - tsA;
+        };
         if (isAdmin) {
           const all = await listAllPolicies();
-          setItems(all.map((it) => ({ ...(it as PolicyRecord), id: it.id!, ownerUid: it.ownerUid })));
+          setItems(all.map((it) => ({ ...(it as PolicyRecord), id: it.id!, ownerUid: it.ownerUid })).sort(sortByCreatedAt));
         } else {
           const mine = await listPolicies(user.uid);
-          setItems(mine.map((it) => ({ ...(it as PolicyRecord), id: it.id!, ownerUid: user.uid })));
+          setItems(mine.map((it) => ({ ...(it as PolicyRecord), id: it.id!, ownerUid: user.uid })).sort(sortByCreatedAt));
         }
       } catch (e) {
         console.error(e);

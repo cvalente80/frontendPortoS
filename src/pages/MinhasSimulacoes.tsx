@@ -29,6 +29,7 @@ export default function MinhasSimulacoes(): React.ReactElement {
   const { user, displayName, isAdmin, refreshAdminStatus } = useAuth();
   const { t, i18n } = useTranslation(['mysims', 'common']);
   const [items, setItems] = useState<SimulationDoc[]>([]);
+  const [choiceItems, setChoiceItems] = useState<SimulationDoc[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -207,8 +208,12 @@ export default function MinhasSimulacoes(): React.ReactElement {
           }
           return { id: d.id, ...data, ownerUid } as SimulationDoc;
         });
-        const filtered = filter === 'all' ? docs : docs.filter((d) => d.type === filter);
+        // Excluir registos de escolha de periodicidade ({jobId}:choice:{periodo})
+        const allDocs = filter === 'all' ? docs : docs.filter((d) => d.type === filter);
+        const filtered = allDocs.filter((d) => !d.id.includes(':choice:'));
+        const choices = allDocs.filter((d) => d.id.includes(':choice:'));
         setItems(filtered);
+        setChoiceItems(choices);
         setLoading(false);
       },
       error: (e: any) => {
@@ -229,9 +234,12 @@ export default function MinhasSimulacoes(): React.ReactElement {
                 if (usersIdx >= 0 && segments[usersIdx + 1]) ownerUid = segments[usersIdx + 1];
               } catch {}
               return { id: d.id, ...data, ownerUid } as SimulationDoc;
-            });
-            const filtered = filter === 'all' ? docs : docs.filter((d) => d.type === filter);
+              });
+            const allDocs2 = filter === 'all' ? docs : docs.filter((d) => d.type === filter);
+            const filtered = allDocs2.filter((d) => !d.id.includes(':choice:'));
+            const choices2 = allDocs2.filter((d) => d.id.includes(':choice:'));
             setItems(filtered);
+            setChoiceItems(choices2);
           } catch (fallbackErr: any) {
             console.error('[MinhasSimulacoes] Fallback getDocs failed:', fallbackErr);
             const code2 = fallbackErr?.code || fallbackErr?.status || 'unknown';
@@ -388,7 +396,16 @@ export default function MinhasSimulacoes(): React.ReactElement {
                   {/* Detalhe estruturado para Auto/Habitação; fallback para summary multi-linha */}
                   {it.type === 'auto' ? (
                     (() => {
-                      const p = (it as any).payload || {};
+                      const rawP = (it as any).payload || {};
+                      // Se cotacaoConfirmada mas sem dados de preço, enriquecer com o documento :choice: correspondente
+                      const p = (cotacaoConfirmada && !rawP.periodicidadeEscolhida && plate)
+                        ? (() => {
+                            const choiceItem = choiceItems
+                              .filter(d => (d as any)?.payload?.matricula === plate)
+                              .sort((a, b) => ((b as any)?.createdAt?.seconds || 0) - ((a as any)?.createdAt?.seconds || 0))[0];
+                            return choiceItem ? { ...rawP, ...(choiceItem as any).payload } : rawP;
+                          })()
+                        : rawP;
                       const fmtDate = (raw?: string) => {
                         if (!raw) return '-';
                         const m = String(raw).match(/^(\d{4})-(\d{2})-(\d{2})$/);

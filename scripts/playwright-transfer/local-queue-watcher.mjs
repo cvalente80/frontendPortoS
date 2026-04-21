@@ -181,7 +181,8 @@ await recoverStaleJobs();
 
 const HEARTBEAT_INTERVAL_MS = Number(process.env.TRANSFER_WATCHER_HEARTBEAT_MS ?? 30_000); // 30s
 const LISTENER_DEAD_TIMEOUT_MS = Number(process.env.TRANSFER_WATCHER_DEAD_TIMEOUT_MS ?? 2 * 60_000); // 2min sem snapshot = morto
-const POLLING_TIMEOUT_MS = 15_000; // getDocs não pode ficar pendurado mais de 15s
+const POLLING_TIMEOUT_MS = 30_000; // getDocs timeout — aumentado para redes lentas/Mac em repouso
+let pollingFailStreak = 0; // contagem de falhas consecutivas de polling
 
 let lastSnapshotAt = 0; // 0 = nunca recebeu snapshot → polling imediato no primeiro heartbeat
 let currentUnsubscribe = null;
@@ -258,6 +259,7 @@ setInterval(async () => {
   try {
     const snap = await getDocsWithTimeout(q, POLLING_TIMEOUT_MS);
     lastSnapshotAt = Date.now(); // getDocs bem-sucedido = rede ok
+    pollingFailStreak = 0;
     snap.forEach((d) => {
       if (d.data().status === 'queued') {
         console.log(`[watcher] [heartbeat] Job pendente via polling: ${d.id}`);
@@ -267,7 +269,15 @@ setInterval(async () => {
       }
     });
   } catch (err) {
-    console.warn(`[watcher] [heartbeat] Polling falhou: ${err?.message}`);
+    pollingFailStreak++;
+    console.warn(`[watcher] [heartbeat] Polling falhou (${pollingFailStreak}ª vez consecutiva): ${err?.message}`);
+    // Após 3 falhas seguidas, forçar reconexão do listener (pode ter perdido token de auth)
+    if (pollingFailStreak >= 3) {
+      console.warn('[watcher] 🔄 3 falhas consecutivas — a forçar reconexão do listener...');
+      pollingFailStreak = 0;
+      lastSnapshotAt = 0;
+      startListener();
+    }
   } finally {
     pollingInFlight = false;
   }
