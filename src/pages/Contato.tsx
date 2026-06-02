@@ -3,6 +3,7 @@ import Seo from "../components/Seo";
 import { safeEmailSend, EMAILJS_SERVICE_ID_GENERIC, EMAILJS_TEMPLATE_ID_GENERIC, EMAILJS_USER_ID_GENERIC } from "../emailjs.config";
 import { Trans, useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
+import { trackLead, trackPhoneClick } from "../lib/tracking";
 
 type FormState = {
   nome: string;
@@ -176,6 +177,13 @@ export default function Contato() {
 
     safeEmailSend(EMAILJS_SERVICE_ID_GENERIC, EMAILJS_TEMPLATE_ID_GENERIC, templateParams, EMAILJS_USER_ID_GENERIC)
       .then(() => {
+        trackLead({
+          lead_type: 'contact_form',
+          page: 'contact',
+          language: base,
+          request_type: form.tipoPedido,
+          product_interest: form.produtoInteresse || 'none',
+        });
         setMensagem(t('messages.success'));
         setMensagemTipo('sucesso');
         setForm({ nome: '', email: '', telefone: '', tipoPedido: t('requestType.info'), produtoInteresse: '', assunto: '', mensagem: '', aceitaRgpd: false });
@@ -203,6 +211,13 @@ export default function Contato() {
               const txt = await resp.text().catch(() => '');
               throw new Error(`Fallback failed: ${resp.status} ${resp.statusText} ${txt}`);
             }
+            trackLead({
+              lead_type: 'contact_form',
+              page: 'contact',
+              language: base,
+              request_type: form.tipoPedido,
+              product_interest: form.produtoInteresse || 'none',
+            });
             setMensagem(t('messages.success'));
             setMensagemTipo('sucesso');
             setForm({ nome: '', email: '', telefone: '', tipoPedido: t('requestType.info'), produtoInteresse: '', assunto: '', mensagem: '', aceitaRgpd: false });
@@ -279,6 +294,7 @@ export default function Contato() {
                 <div className="flex flex-col">
                   <a
                     href={`tel:${primaryPhone.tel}`}
+                    onClick={() => trackPhoneClick({ page: 'contact', placement: 'phone-link-primary', language: base })}
                     className="text-2xl font-bold tracking-wide hover:underline whitespace-nowrap"
                     title={t('callNowCta') as string}
                   >
@@ -287,6 +303,7 @@ export default function Contato() {
                   {secondaryPhone && (
                     <a
                       href={`tel:${secondaryPhone.tel}`}
+                      onClick={() => trackPhoneClick({ page: 'contact', placement: 'phone-link-secondary', language: base })}
                       className="text-sm text-blue-800 hover:underline whitespace-nowrap"
                       title={t('callNowCta') as string}
                     >
@@ -297,6 +314,7 @@ export default function Contato() {
               </div>
               <a
                 href={`tel:${primaryPhone.tel}`}
+                onClick={() => trackPhoneClick({ page: 'contact', placement: 'phone-cta', language: base })}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold shadow hover:bg-blue-500"
                 aria-label={t('callNowCta')}
               >

@@ -13,6 +13,7 @@ import { auth, db } from '../firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { saveSimulation } from '../utils/simulations';
 import { enqueueSimulationTransferJob } from '../utils/simulationTransferJobs';
+import { trackLead } from '../lib/tracking';
 registerLocale("pt", pt);
 registerLocale("en", enGB);
 
@@ -120,6 +121,7 @@ export default function SimulacaoAuto() {
 
   // Determina a "marca" do site actual (para assinatura dinâmica no email)
   const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+  const pathname = typeof window !== 'undefined' ? window.location.pathname.toLowerCase() : '';
   let siteBrand = 'Ansião';
   if (host.includes('aurelio')) siteBrand = 'Aurélio';
   else if (host.includes('sintraseg') || host.includes('sintra')) siteBrand = 'Sintra';
@@ -127,6 +129,9 @@ export default function SimulacaoAuto() {
   else if (host.includes('povoaseg') || host.includes('povoa')) siteBrand = 'Póvoa';
   else if (host.includes('lisboaseg') || host.includes('lisboa')) siteBrand = 'Lisboa';
   else if (host.includes('portoseg') || host.includes('porto')) siteBrand = 'Porto';
+  const landingSource = pathname.includes('/povoa-auto') || (typeof document !== 'undefined' && document.referrer.includes('/povoa-auto'))
+    ? 'povoa-auto'
+    : 'direct';
 
 
   function handleChange(e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) {
@@ -377,6 +382,13 @@ export default function SimulacaoAuto() {
   console.log('[EmailJS][Auto] Sending', { service: EMAILJS_SERVICE_ID, template: EMAILJS_TEMPLATE_ID });
   const resp = await safeEmailSend(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams, EMAILJS_USER_ID);
   console.log('[EmailJS][Auto] Success', resp?.status, resp?.text);
+      trackLead({
+        lead_type: 'auto_quote',
+        page: 'simulacao-auto',
+        language: base,
+        source_landing: landingSource,
+        insurance_type: form.tipoSeguro,
+      });
       setMensagem(t('messages.submitSuccess'));
       setMensagemTipo('sucesso');
       // Avança para o passo 4 (aguarda resultados via listener Firestore)

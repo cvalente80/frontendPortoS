@@ -6,6 +6,7 @@ import { ensureChatForUser, addUserMessage, subscribeMessages, markUserOpened, u
 import { db } from '../firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useAuthUX } from '../context/AuthUXContext';
+import { trackWhatsAppClick } from '../lib/tracking';
 
 type ChatMessage = { id: string; who: 'user' | 'agent'; text: string; at: number };
 
@@ -367,6 +368,7 @@ export default function ChatWidget({ phoneNumber, whatsappNumber, defaultOpen = 
                 href={whatsHref}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackWhatsAppClick({ page: location.pathname, placement: 'chat-widget', language: base, destination: 'wa.me' })}
                 className="inline-flex items-center gap-2 px-3 py-2 rounded-full bg-[#25D366] text-white shadow-lg hover:bg-[#1fb256] transition"
                 aria-label={t('chat.whatsappNow')}
               >

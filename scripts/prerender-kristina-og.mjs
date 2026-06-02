@@ -78,6 +78,24 @@ const routes = [
     canonical: `${siteUrl}/en/kristin-guia`,
     locale: 'en_GB',
     localeAlt: 'pt_PT'
+  },
+  {
+    outDir: 'pt/povoa-auto',
+    title: 'Póvoa Seguros | Seguro Automóvel com descontos extra',
+    description:
+      'Peça a sua simulação de seguro automóvel em Póvoa de Santa Iria com descontos por experiência, vantagens para bons condutores e resposta rápida.',
+    canonical: `${siteUrl}/pt/povoa-auto`,
+    locale: 'pt_PT',
+    localeAlt: 'en_GB'
+  },
+  {
+    outDir: 'en/povoa-auto',
+    title: 'Póvoa Seguros | Car insurance with extra savings',
+    description:
+      'Request your car insurance quote in Póvoa de Santa Iria with experience-based discounts, benefits for careful drivers and a fast response.',
+    canonical: `${siteUrl}/en/povoa-auto`,
+    locale: 'en_GB',
+    localeAlt: 'pt_PT'
   }
 ];
 

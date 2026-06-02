@@ -17,6 +17,7 @@ export function DesktopNav() {
   const profileRef = useRef<HTMLDivElement | null>(null);
   const updatesRef = useRef<HTMLDivElement | null>(null);
   const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+  const pathname = typeof window !== 'undefined' ? window.location.pathname.toLowerCase() : '';
   let brandName = 'Ansião Seguros';
   if (host.includes('aurelio')) brandName = 'Aurélio Seguros';
   else if (host.includes('sintraseg') || host.includes('sintra')) brandName = 'Sintra Seguros';
@@ -25,6 +26,7 @@ export function DesktopNav() {
   else if (host.includes('lisboaseg') || host.includes('lisboa')) brandName = 'Lisboa Seguros';
   else if (host.includes('portoseg') || host.includes('porto')) brandName = 'Porto Seguros';
   else if (host.includes('vlxinsurance') || host.includes('vlx') || host.includes('vfx')) brandName = 'VFX Seguros';
+  else if (pathname.includes('/povoa-auto')) brandName = 'Póvoa Seguros';
 
   // Close menus on outside click or Escape
   useEffect(() => {

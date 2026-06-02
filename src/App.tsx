@@ -11,6 +11,7 @@ import SimulacaoSaude from "./pages/SimulacaoSaude";
 import SimulacaoHabitacao from "./pages/SimulacaoHabitacao";
 import LandingKristina from "./pages/LandingKristina";
 import LandingKristinaGuia from "./pages/LandingKristinaGuia";
+import LandingPovoaAuto from "./pages/LandingPovoaAuto";
 import Produtos from "./pages/Produtos";
 import Contato from "./pages/Contato";
 import ProdutoAuto from "./pages/ProdutoAuto";
@@ -37,6 +38,7 @@ const ForgotPassword = lazy(() => import('./pages/auth/ForgotPassword'));
 const VerifyEmail = lazy(() => import('./pages/auth/VerifyEmail'));
 import React from "react";
 import Header from "./components/Header";
+import TrackingPageView from "./components/TrackingPageView";
 import { ProtectedRoute } from './context/AuthContext';
 import MinhasSimulacoes from './pages/MinhasSimulacoes';
 import MinhasApolices from './pages/MinhasApolices';
@@ -49,6 +51,7 @@ function App(): React.ReactElement {
     const { lang } = useParams();
     const base = lang === 'en' ? 'en' : (lang === 'pt' ? 'pt' : 'pt');
     const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+    const pathname = typeof window !== 'undefined' ? window.location.pathname.toLowerCase() : '';
     let brandName = 'Ansião Seguros';
     let backgroundAsset = 'imagens/image.png';
     if (host.includes('aurelio')) {
@@ -79,6 +82,10 @@ function App(): React.ReactElement {
       brandName = 'VFX Seguros';
       backgroundAsset = 'imagens/bg-vfx.jpg';
     }
+    else if (pathname.includes('/povoa-auto')) {
+      brandName = 'Póvoa Seguros';
+      backgroundAsset = 'imagens/bg-povoa1.jpg';
+    }
     // Force i18n language to follow URL param (robust on first load / GH Pages)
     useEffect(() => {
       if (lang === 'pt' || lang === 'en') {
@@ -92,6 +99,7 @@ function App(): React.ReactElement {
     }
     return (
       <>
+        <TrackingPageView />
         {/* Marca de água no body */}
         <div style={{
           position: 'fixed',
@@ -122,6 +130,7 @@ function App(): React.ReactElement {
           {/* Campaign landing pages (shareable URLs) */}
           <Route path="kristin" element={<LandingKristina />} />
           <Route path="kristin-guia" element={<LandingKristinaGuia />} />
+          <Route path="povoa-auto" element={<LandingPovoaAuto />} />
           {/* Backwards-compatible redirects */}
           <Route path="kristina" element={<Navigate to={`/${base}/kristin`} replace />} />
           <Route path="kristina-guia" element={<Navigate to={`/${base}/kristin-guia`} replace />} />

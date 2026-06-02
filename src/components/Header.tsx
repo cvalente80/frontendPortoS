@@ -7,14 +7,25 @@ export default function Header() {
   const { user, loading, displayName, loginWithGoogle, logout, isAdmin } = useAuth();
   const base = typeof window !== 'undefined' && window.location.pathname.startsWith('/en') ? 'en' : 'pt';
   const { t } = useTranslation('common');
+  const host = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+  const pathname = typeof window !== 'undefined' ? window.location.pathname.toLowerCase() : '';
+  let brandName = 'Ansião Seguros';
+  if (host.includes('aurelio')) brandName = 'Aurélio Seguros';
+  else if (host.includes('sintraseg') || host.includes('sintra')) brandName = 'Sintra Seguros';
+  else if (host.includes('pombalseg') || host.includes('pombal')) brandName = 'Pombal Seguros';
+  else if (host.includes('povoaseg') || host.includes('povoa')) brandName = 'Póvoa Seguros';
+  else if (host.includes('lisboaseg') || host.includes('lisboa')) brandName = 'Lisboa Seguros';
+  else if (host.includes('portoseg') || host.includes('porto')) brandName = 'Porto Seguros';
+  else if (host.includes('vlxinsurance') || host.includes('vlx') || host.includes('vfx')) brandName = 'VFX Seguros';
+  else if (pathname.includes('/povoa-auto')) brandName = 'Póvoa Seguros';
 
   return (
     <header className="w-full border-b bg-white shadow-sm">
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
         {/* Logótipo ou nome do site à esquerda */}
         <div className="flex items-center gap-2">
-          <img src={`${import.meta.env.BASE_URL}logo-empresarial.svg`} alt="Logo Ansião Seguros" className="h-8 w-8" />
-          <span className="text-lg font-semibold text-gray-800">Ansião Seguros</span>
+          <img src={`${import.meta.env.BASE_URL}logo-empresarial.svg`} alt={`Logo ${brandName}`} className="h-8 w-8" />
+          <span className="text-lg font-semibold text-gray-800">{brandName}</span>
         </div>
 
         {/* Controlos à direita */}
