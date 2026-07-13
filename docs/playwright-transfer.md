@@ -44,11 +44,16 @@ Target atual por omissão: `https://myzurich.zurich.com.pt/`.
    - `npm run pw:install`
 2. Teste rápido em página local:
    - `npm run pw:transfer:local -- --url file://$PWD/scripts/playwright-transfer/demo-form.html`
-3. Teste rápido contra Zurich (exige ajuste de seletores):
+3. Fluxo Gherkin/BDD com steps explícitos:
+   - `npm run pw:bdd:demo`
+   - `npm run pw:bdd`
+   - `npm run pw:bdd:zurich:dry`
+   - `npm run pw:bdd:zurich`
+4. Teste rápido contra Zurich (exige ajuste de seletores):
    - `npm run pw:transfer:local -- --url https://myzurich.zurich.com.pt/ --selectors scripts/playwright-transfer/selectors.zurich.json`
-4. Teste com login (credenciais de sandbox):
+5. Teste com login (credenciais de sandbox):
    - `TRANSFER_LOGIN_REQUIRED=true TRANSFER_LOGIN_USERNAME='utilizador' TRANSFER_LOGIN_PASSWORD='password' npm run pw:transfer:local -- --url https://myzurich.zurich.com.pt/ --selectors scripts/playwright-transfer/selectors.zurich.json --login-success-url /myzurich/`
-5. Processar um job real no Firestore (uma vez):
+6. Processar um job real no Firestore (uma vez):
    - `npm run pw:transfer:worker`
 
 ## Secrets (recomendado)
@@ -90,3 +95,5 @@ Após a submissão em `simulacao-auto`, chamar `enqueueSimulationTransferJob(...
 - Nunca executar Playwright no browser React.
 - Não guardar credenciais do site destino em `VITE_*`.
 - Use retries e backoff no worker para reduzir falhas transitórias.
+- Os steps Gherkin vivem em `features/step-definitions/*` e a feature base em `features/playwright-transfer.feature`.
+- A BDD Zurich real usa `features/zurich-auto-real.feature` e aceita `TRANSFER_SIMULATION_PAYLOAD_FILE` para forçar um payload local.

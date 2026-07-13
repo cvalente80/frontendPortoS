@@ -36,6 +36,24 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const POLL_INTERVAL_MS = Number(process.env.TRANSFER_WATCHER_POLL_MS ?? 4000);
 const MAX_CONCURRENT = Number(process.env.TRANSFER_WATCHER_MAX_CONCURRENT ?? 1);
 
+function credentialHealthSummary() {
+  const username = String(process.env.TRANSFER_LOGIN_USERNAME || '').trim();
+  const password = String(process.env.TRANSFER_LOGIN_PASSWORD || '');
+  const loginRequired = String(process.env.TRANSFER_LOGIN_REQUIRED || 'false').trim().toLowerCase() === 'true';
+
+  const maskedUsername = username
+    ? `${username.slice(0, 2)}***${username.slice(-2)}`
+    : 'missing';
+
+  return {
+    loginRequired,
+    hasUsername: Boolean(username),
+    hasPassword: Boolean(password),
+    usernameMasked: maskedUsername,
+    passwordLength: password.length,
+  };
+}
+
 function cleanEnv(value) {
   if (!value) return '';
   return String(value).split('#')[0].trim();
@@ -60,9 +78,16 @@ function getFirebaseConfig() {
 const firebaseConfig = getFirebaseConfig();
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const watcherMode = process.env.WATCHER_ENV ?? 'local';
+const envHint = watcherMode === 'production' ? '.env.playwright.prod' : '.env.playwright.local';
+const credentialHealth = credentialHealthSummary();
 
 console.log(`[watcher] 🔥 Firebase projectId: ${firebaseConfig.projectId}`);
-console.log(`[watcher] 🌐 Modo: ${process.env.WATCHER_ENV ?? 'local'} | headless: ${process.env.PW_HEADLESS ?? 'true'} | max-concurrent: ${MAX_CONCURRENT}`);
+console.log(`[watcher] 🌐 Modo: ${watcherMode} | headless: ${process.env.PW_HEADLESS ?? 'true'} | max-concurrent: ${MAX_CONCURRENT}`);
+console.log(`[watcher] 🔐 Login Zurich -> required=${credentialHealth.loginRequired} user=${credentialHealth.usernameMasked} password=${credentialHealth.hasPassword ? `set(${credentialHealth.passwordLength})` : 'missing'} sourceHint=${envHint}`);
+if (credentialHealth.loginRequired && (!credentialHealth.hasUsername || !credentialHealth.hasPassword)) {
+  console.warn('[watcher] ⚠️  Credenciais incompletas para login Zurich. Verifica TRANSFER_LOGIN_USERNAME/TRANSFER_LOGIN_PASSWORD no env-file ativo.');
+}
 
 // Conjunto de jobIds já em processamento (evita arrancar o mesmo job duas vezes)
 const activeJobs = new Set();

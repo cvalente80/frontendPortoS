@@ -126,4 +126,7 @@ If you are developing a production application, we recommend using TypeScript wi
 - Guia completo: `docs/playwright-transfer.md`.
 - Seletores iniciais Zurich: `scripts/playwright-transfer/selectors.zurich.json`.
 - Runner local: `npm run pw:transfer:local -- --url file://$PWD/scripts/playwright-transfer/demo-form.html`.
+- BDD com Gherkin: `npm run pw:bdd:demo`.
+- BDD Zurich real: `npm run pw:bdd:zurich:dry`.
+- E2E Zurich real (Essencial → Coberturas → Calcular): `npm run pw:e2e:zurich:real`.
 - Worker (uma execução): `npm run pw:transfer:worker`.

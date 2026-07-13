@@ -147,6 +147,19 @@ const skipVehicleLoadedWait = ['1', 'true', 'yes'].includes(String(process.env.T
 const captureMatriculaIntermediateShot = ['1', 'true', 'yes'].includes(String(process.env.TRANSFER_CAPTURE_MATRICULA_SHOT || 'false').trim().toLowerCase());
 const loginLandingWaitTimeoutMs = Math.max(3000, Number.parseInt(String(process.env.TRANSFER_LOGIN_LANDING_WAIT_MS || '12000'), 10) || 12000);
 const menuSimuladoresReadyWaitMs = Math.max(600, Number.parseInt(String(process.env.TRANSFER_MENU_READY_WAIT_MS || '2500'), 10) || 2500);
+const emailVerificationEnabled = ['1', 'true', 'yes'].includes(String(process.env.TRANSFER_EMAIL_VERIFICATION_ENABLED || 'false').trim().toLowerCase());
+const emailWebmailUrl = String(process.env.TRANSFER_EMAIL_WEBMAIL_URL || 'https://webmail.amen.pt/').trim();
+const emailWebmailUsername = String(process.env.TRANSFER_EMAIL_WEBMAIL_USERNAME || '').trim();
+const emailWebmailPassword = String(process.env.TRANSFER_EMAIL_WEBMAIL_PASSWORD || '');
+const emailVerificationWaitMs = Math.max(5000, Number.parseInt(String(process.env.TRANSFER_EMAIL_VERIFICATION_WAIT_MS || '90000'), 10) || 90000);
+const emailInboxWaitMs = Math.max(4000, Number.parseInt(String(process.env.TRANSFER_EMAIL_INBOX_WAIT_MS || '15000'), 10) || 15000);
+const emailOpenWaitMs = Math.max(1200, Number.parseInt(String(process.env.TRANSFER_EMAIL_OPEN_WAIT_MS || '6000'), 10) || 6000);
+const emailDispatchWaitMs = Math.max(1000, Number.parseInt(String(process.env.TRANSFER_EMAIL_DISPATCH_WAIT_MS || '2500'), 10) || 2500);
+const emailSendManualMode = ['1', 'true', 'yes'].includes(String(process.env.TRANSFER_EMAIL_SEND_MANUAL || 'false').trim().toLowerCase());
+const emailSendManualTimeoutMs = Math.max(5000, Number.parseInt(String(process.env.TRANSFER_EMAIL_SEND_MANUAL_TIMEOUT_MS || '240000'), 10) || 240000);
+const emailPreSendPauseMs = Math.max(0, Number.parseInt(String(process.env.TRANSFER_EMAIL_PRE_SEND_PAUSE_MS || '0'), 10) || 0);
+const emailPostClickPauseMs = Math.max(0, Number.parseInt(String(process.env.TRANSFER_EMAIL_POST_CLICK_PAUSE_MS || '0'), 10) || 0);
+const emailCodeRegexRaw = String(process.env.TRANSFER_EMAIL_CODE_REGEX || '').trim();
 const clienteReadyElementId = 'Zurich_PT_Theme_wtZurich_PT_Theme_Layout_SideBar_block_WebPatterns_wt24_block_wtColumn1_wtMainContent_wt20_wtItems_wt893_wtContent_WebPatterns_wt271_block_wtColumn1_Simuladores_WB_wt619_block_wtcnt_Cliente';
 const clienteReadyWaitTimeoutMs = Math.max(300, Number.parseInt(String(process.env.TRANSFER_CLIENTE_READY_WAIT_MS || '2000'), 10) || 2000);
 const clienteReadyPollMs = Math.max(40, Number.parseInt(String(process.env.TRANSFER_CLIENTE_READY_POLL_MS || '90'), 10) || 90);
@@ -155,6 +168,7 @@ const learnedResumoParentSelector = String(process.env.TRANSFER_RESUMO_LEARNED_P
 const learnedResumoText = String(process.env.TRANSFER_RESUMO_LEARNED_TEXT || 'Proteção Jurídica').trim();
 // Seletor aprendido para o card "Opção Base" na página de seleção de planos (Terceiros)
 const learnedBaseCardSelector = String(process.env.TRANSFER_BASE_CARD_SELECTOR || '').trim();
+const learnedEssencialCardSelector = String(process.env.TRANSFER_ESSENCIAL_CARD_SELECTOR || '').trim();
 const manualCoberturasDragCount = Math.max(1, Number.parseInt(String(process.env.TRANSFER_COBERTURAS_MANUAL_DRAG_COUNT || '1'), 10) || 1);
 const manualCoberturasDragTimeoutMs = Math.max(15000, Number.parseInt(String(process.env.TRANSFER_COBERTURAS_MANUAL_DRAG_TIMEOUT_MS || '180000'), 10) || 180000);
 const learnedCoberturasHandleSelector = String(process.env.TRANSFER_COBERTURAS_DRAG_SELECTOR || 'div#Zurich_PT_Theme_wt146_block_WebPatterns_wt24_block_wtColumn1_wtMainContent_wtlr_Objectos_ctl00_wt407_wtItems_wt398_wtContent_wt416_wtLR_Descontos_ctl02_Zurich_PT_Patterns_wt12_block_wtSliderRange > span.ui-slider-handle.ui-state-default.ui-corner-all').trim();
@@ -178,6 +192,501 @@ class ControlledPauseStop extends Error {
 function cleanEnv(value) {
   if (!value) return '';
   return String(value).split('#')[0].trim();
+}
+
+function parseEnvRegex(rawValue) {
+  if (!rawValue) return null;
+  const wrapped = rawValue.match(/^\/(.*)\/([a-z]*)$/i);
+  if (wrapped) {
+    return new RegExp(wrapped[1], wrapped[2]);
+  }
+  return new RegExp(rawValue, 'i');
+}
+
+function extractVerificationCode(text) {
+  const content = String(text || '');
+  const patterns = [
+    parseEnvRegex(emailCodeRegexRaw),
+    /(?:c[oó]digo|codigo|code|passcode|otp|verification code)[^\d]{0,24}(\d{4,8})/i,
+    /\b(\d{6})\b/,
+    /\b(\d{8})\b/,
+  ].filter(Boolean);
+
+  for (const pattern of patterns) {
+    const match = content.match(pattern);
+    if (match?.[1]) return match[1];
+    if (match?.[0] && /^\d{4,8}$/.test(match[0])) return match[0];
+  }
+
+  return null;
+}
+
+async function acceptAmenWebmailCookies(mailPage, metaState) {
+  const started = Date.now();
+  const maxWaitMs = 6000;
+
+  while (Date.now() - started < maxWaitMs) {
+    const scopes = [mailPage, ...mailPage.frames()];
+
+    for (const scope of scopes) {
+      const clicked = await clickFirstVisible([
+        { name: 'amen cookies aceitar', locator: scope.getByRole('button', { name: /^aceitar$/i }) },
+        { name: 'amen cookies aceitar text', locator: scope.getByText(/^aceitar$/i) },
+        { name: 'amen cookies accept', locator: scope.getByRole('button', { name: /accept|accept all|allow all|aceitar|aceitar todos|permitir/i }) },
+        { name: 'amen cookies text', locator: scope.getByText(/accept|accept all|allow all|aceitar|aceitar todos|permitir/i) },
+        { name: 'amen cookies fallback', locator: scope.locator('[id*="cookie" i] button, [class*="cookie" i] button, [aria-label*="cookie" i] button, [id*="cookie" i] input[type="submit"], [class*="cookie" i] input[type="submit"]') },
+      ], 'amen-webmail-cookies');
+
+      if (clicked) {
+        metaState.steps.push('email-verification -> webmail-cookies-accepted');
+        await mailPage.waitForTimeout(300);
+        return true;
+      }
+    }
+
+    await mailPage.waitForTimeout(250);
+  }
+
+  return false;
+}
+
+async function readLatestAmenVerificationCode(metaState) {
+  if (!emailWebmailUsername || !emailWebmailPassword) {
+    throw new Error('Faltam credenciais do webmail Amen para ler o código de verificação.');
+  }
+
+  const mailPage = await browser.newPage({ viewport: { width: 1440, height: 960 } });
+  metaState.steps.push('email-verification -> webmail-opened');
+
+  try {
+    await mailPage.goto(emailWebmailUrl, { waitUntil: 'domcontentloaded', timeout: emailInboxWaitMs });
+
+    await acceptAmenWebmailCookies(mailPage, metaState);
+
+    const filledUser = await fillFirstMatchingField(mailPage, [
+      'input[name="_user"]',
+      '#rcmloginuser',
+      'input[type="email"]',
+      'input[name*="user" i]',
+      'input[id*="user" i]',
+    ], emailWebmailUsername, 'amen-webmail-username', metaState);
+    const filledPass = await fillFirstMatchingField(mailPage, [
+      'input[name="_pass"]',
+      '#rcmloginpwd',
+      'input[type="password"]',
+      'input[name*="pass" i]',
+      'input[id*="pass" i]',
+    ], emailWebmailPassword, 'amen-webmail-password', metaState);
+
+    if (!filledUser || !filledPass) {
+      throw new Error('Não consegui preencher o login do webmail Amen.');
+    }
+
+    const loggedIn = await clickFirstVisible([
+      { name: 'amen webmail login', locator: mailPage.locator('#rcmloginsubmit, button[type="submit"], input[type="submit"]') },
+    ], 'amen-webmail-login');
+
+    if (!loggedIn) {
+      throw new Error('Não consegui submeter o login do webmail Amen.');
+    }
+
+    const inboxSelectors = [
+      'table#messagelist tbody tr',
+      'table.records-table tbody tr',
+      'tr.message',
+      'li.message',
+      '.listing tbody tr',
+    ];
+
+    const inboxStarted = Date.now();
+    let inboxSelector = null;
+    while (!inboxSelector && Date.now() - inboxStarted < emailInboxWaitMs) {
+      for (const selector of inboxSelectors) {
+        const count = await mailPage.locator(selector).count().catch(() => 0);
+        if (count > 0) {
+          inboxSelector = selector;
+          break;
+        }
+      }
+      if (!inboxSelector) {
+        await mailPage.waitForTimeout(250);
+      }
+    }
+
+    if (!inboxSelector) {
+      throw new Error('Não encontrei emails no webmail Amen.');
+    }
+
+    const preferredEmailLinks = [
+      'table#messagelist tbody tr.message a[href*="_action=show"]',
+      'table#messagelist tbody tr a[href*="_action=show"]',
+      `${inboxSelector} a[href*="_action=show"]`,
+    ];
+
+    let openedEmail = false;
+    for (const selector of preferredEmailLinks) {
+      const locator = mailPage.locator(selector).filter({ hasText: /Zurich Okta|C[oó]digo de verifica[cç][aã]o [úu]nico/i }).first();
+      const count = await locator.count().catch(() => 0);
+      if (!count) continue;
+      try {
+        const href = await locator.getAttribute('href').catch(() => null);
+        if (href) {
+          await mailPage.goto(new URL(href, mailPage.url()).toString(), { waitUntil: 'domcontentloaded', timeout: emailOpenWaitMs });
+          metaState.steps.push(`email-verification -> latest-email-link-opened (${selector} -> goto)`);
+        } else {
+          await locator.click({ timeout: 15000 });
+          metaState.steps.push(`email-verification -> latest-email-link-opened (${selector})`);
+        }
+        openedEmail = true;
+        break;
+      } catch {
+        try {
+          await locator.click({ force: true, timeout: 15000 });
+          metaState.steps.push(`email-verification -> latest-email-link-opened (${selector})`);
+          openedEmail = true;
+          break;
+        } catch {
+        }
+      }
+    }
+
+    if (!openedEmail) {
+      const latestEmail = mailPage.locator(inboxSelector).filter({ hasText: /Zurich Okta|C[oó]digo de verifica[cç][aã]o [úu]nico/i }).first();
+      const fallbackCount = await latestEmail.count().catch(() => 0);
+      const fallbackTarget = fallbackCount ? latestEmail : mailPage.locator(inboxSelector).first();
+      await fallbackTarget.click({ timeout: 15000 }).catch(async () => fallbackTarget.click({ force: true, timeout: 15000 }));
+      metaState.steps.push(`email-verification -> latest-email-opened (${inboxSelector})`);
+    }
+
+    await mailPage.waitForFunction(() => {
+      const directSelectors = [
+        '#messagebody',
+        '#messagebody div',
+        '#messagebody pre',
+        '.message-part',
+        '.message-htmlpart',
+        '.mail-body',
+        '.mailview-content',
+        '#layout-content',
+        '#layout-content .content',
+        '#layout-content .message-part',
+      ];
+
+      for (const selector of directSelectors) {
+        const element = document.querySelector(selector);
+        const text = (element?.innerText || element?.textContent || '').trim();
+        if (text) return true;
+      }
+
+      const iframe = document.querySelector('iframe#messagecontframe, iframe[id*="message" i], iframe[name*="message" i]');
+      const src = iframe?.getAttribute('src') || '';
+      return Boolean(src) && !/watermark/i.test(src);
+    }, { timeout: emailOpenWaitMs }).catch(() => null);
+
+    const bodyStarted = Date.now();
+    let emailText = '';
+    let emailFrameHtml = '';
+    while (!emailText && Date.now() - bodyStarted < emailOpenWaitMs) {
+      const snapshot = await mailPage.evaluate(async () => {
+        const directSelectors = [
+          '#messagebody',
+          '#messagebody div',
+          '#messagebody pre',
+          '.message-part',
+          '.message-htmlpart',
+          '.mail-body',
+          '.mailview-content',
+          '#layout-content',
+          '#layout-content .content',
+          '#layout-content .message-part',
+        ];
+
+        for (const selector of directSelectors) {
+          const element = document.querySelector(selector);
+          const text = (element?.innerText || element?.textContent || '').trim();
+          if (text) {
+            return { text, html: element.outerHTML || '' };
+          }
+        }
+
+        const iframes = Array.from(document.querySelectorAll('iframe#messagecontframe, iframe[id*="message" i], iframe[name*="message" i], iframe'));
+        for (const iframe of iframes) {
+          const src = iframe.getAttribute('src') || '';
+          if (src && !/watermark/i.test(src)) {
+            try {
+              const response = await fetch(src, { credentials: 'include' });
+              const html = await response.text();
+              const doc = new DOMParser().parseFromString(html, 'text/html');
+              const text = (doc.body?.innerText || doc.body?.textContent || '').trim();
+              if (text) {
+                return { text, html };
+              }
+            } catch {
+            }
+          }
+
+          if (iframe.contentDocument?.body) {
+            const text = (iframe.contentDocument.body.innerText || iframe.contentDocument.body.textContent || '').trim();
+            if (text) {
+              return {
+                text,
+                html: iframe.contentDocument.documentElement?.outerHTML || '',
+              };
+            }
+          }
+        }
+
+        return { text: '', html: '' };
+      }).catch(() => ({ text: '', html: '' }));
+
+      if (snapshot?.text?.trim()) {
+        emailText = snapshot.text.trim();
+        emailFrameHtml = snapshot.html || '';
+      }
+
+      if (!emailText) {
+        const previewFrame = mailPage.frame({ name: 'messagecontframe' });
+        const frameText = previewFrame
+          ? await previewFrame.locator('body').innerText({ timeout: 250 }).catch(() => '')
+          : '';
+        if (frameText?.trim()) {
+          emailText = frameText.trim();
+          emailFrameHtml = previewFrame
+            ? await previewFrame.locator('html').innerHTML({ timeout: 250 }).catch(() => '')
+            : '';
+        }
+      }
+
+      if (!emailText) {
+        await mailPage.waitForTimeout(90);
+      }
+    }
+
+    if (!emailText) {
+      throw new Error('Não consegui ler o corpo do email mais recente.');
+    }
+
+    await fs.writeFile(path.join(dir, 'email-body.txt'), emailText, 'utf8').catch(() => null);
+    if (emailFrameHtml) {
+      await fs.writeFile(path.join(dir, 'email-frame.html'), emailFrameHtml, 'utf8').catch(() => null);
+    }
+
+    const code = extractVerificationCode(emailText);
+    if (!code) {
+      const emailHtml = await mailPage.content().catch(() => '');
+      if (emailHtml) {
+        await fs.writeFile(path.join(dir, 'email-body.html'), emailHtml, 'utf8').catch(() => null);
+      }
+      throw new Error('Não consegui extrair o código de verificação do email.');
+    }
+
+    metaState.steps.push(`email-verification -> code-extracted (${code.length} digits)`);
+    return code;
+  } finally {
+    await mailPage.close().catch(() => null);
+  }
+}
+
+async function completeEmailVerificationIfPresent(page, metaState) {
+  const shouldTry = emailVerificationEnabled || (emailWebmailUsername && emailWebmailPassword);
+  if (!shouldTry) return false;
+
+  const started = Date.now();
+  let verificationDetected = false;
+
+  while (Date.now() - started < emailVerificationWaitMs) {
+    const currentUrl = page.url();
+    const codeInputVisible = await page.locator('input[name*="code" i], input[id*="code" i], input[name*="otp" i], input[id*="otp" i], input[autocomplete="one-time-code"], input[inputmode="numeric"]').first().isVisible().catch(() => false);
+    const emailOptionVisible = await page.getByText(/email/i).first().isVisible().catch(() => false);
+    const sendCodeVisible = await page.getByRole('button', { name: /send code|enviar c[oó]digo|send/i }).first().isVisible().catch(() => false);
+
+    if (/okta|sso|verify|challenge/i.test(currentUrl) || codeInputVisible || emailOptionVisible || sendCodeVisible) {
+      verificationDetected = true;
+      break;
+    }
+
+    if (currentUrl.includes('/MYZ_Home/Home')) {
+      return false;
+    }
+
+    await page.waitForTimeout(300);
+  }
+
+  if (!verificationDetected) {
+    return false;
+  }
+
+  metaState.steps.push('email-verification -> challenge-detected');
+
+  const clickedEmailOption = await clickFirstVisible([
+    { name: 'email verification option', locator: page.getByRole('button', { name: /email/i }) },
+    { name: 'email verification text', locator: page.getByText(/email/i) },
+  ], 'email-verification-method');
+
+  if (clickedEmailOption) {
+    await page.waitForTimeout(800);
+  }
+
+  if (emailPreSendPauseMs > 0) {
+    metaState.steps.push(`email-verification -> pre-send-click-pause (${emailPreSendPauseMs}ms)`);
+    console.log(`[transfer] ⏸  Pausa de ${emailPreSendPauseMs}ms antes de clicar em "Send me an email".`);
+    await page.waitForTimeout(emailPreSendPauseMs);
+  }
+
+  let clickedSendCode = false;
+  if (emailSendManualMode) {
+    metaState.steps.push('email-verification -> aguardando clique manual no botão Send me an email');
+    await updateDebugOverlay(page, 'email-send-manual-wait');
+    const pauseShot = path.join(dir, '98-email-send-manual-pause.png');
+    await page.screenshot({ path: pauseShot, fullPage: false }).catch(() => null);
+    metaState.pauseScreenshot = pauseShot;
+    metaState.emailSendManualPauseScreenshot = pauseShot;
+    console.log('[transfer] Pausado antes do envio do email. Clica manualmente em "Send me an email" no browser para eu registar o clique.');
+
+    if (manualCaptureArmingMs > 0) {
+      await page.waitForTimeout(manualCaptureArmingMs);
+    }
+
+    const payload = await captureSingleUserClickPassive(page, 'email-send-manual-click', metaState, emailSendManualTimeoutMs);
+    if (!payload) {
+      throw new Error('Timeout: não houve clique manual em "Send me an email".');
+    }
+
+    metaState.manualEmailSendClick = payload;
+    clickedSendCode = true;
+    await updateDebugOverlay(page, 'email-send-manual-click-captured');
+    console.log(`[transfer] Clique do envio de email registado: ${payload.selector || payload.tag || 'unknown'} @${payload.x},${payload.y}`);
+  } else {
+    const autoSendSelectors = [
+      'input.button.button-primary[type="submit"][value="Send me an email"][data-type="save"]',
+      'input[type="submit"][value="Send me an email" i]',
+      'input[type="submit"][value*="send me an email" i]',
+      'button[type="submit"]',
+    ];
+
+    await page.waitForFunction((selectors) => {
+      return selectors.some((selector) => {
+        const element = document.querySelector(selector);
+        if (!element) return false;
+        const style = window.getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        const text = (element.getAttribute('value') || element.textContent || '').trim();
+        return style.display !== 'none'
+          && style.visibility !== 'hidden'
+          && rect.width > 0
+          && rect.height > 0
+          && /send me an email|email|send code|c[oó]digo/i.test(text || selector);
+      });
+    }, autoSendSelectors, { timeout: 15000 }).catch(() => null);
+
+    clickedSendCode = await clickFirstVisible([
+      { name: 'send me an email submit exact', locator: page.locator('input.button.button-primary[type="submit"][value="Send me an email"][data-type="save"]') },
+      { name: 'send me an email submit value', locator: page.locator('input[type="submit"][value="Send me an email" i]') },
+      { name: 'send me an email submit contains', locator: page.locator('input[type="submit"][value*="send me an email" i], input[type="submit"][value*="email" i]') },
+      { name: 'send me an email', locator: page.getByRole('button', { name: /send me an email|enviar-me um email|enviar me um email/i }) },
+      { name: 'send me an email text', locator: page.getByText(/send me an email|enviar-me um email|enviar me um email/i) },
+      { name: 'send email code', locator: page.getByRole('button', { name: /send code|enviar c[oó]digo|send/i }) },
+      { name: 'send email code fallback', locator: page.locator('button[type="submit"], input[type="submit"]') },
+    ], 'email-verification-send-code');
+
+    if (!clickedSendCode) {
+      const verificationHtml = await page.content().catch(() => '');
+      if (verificationHtml) {
+        await fs.writeFile(path.join(dir, 'okta-send-email-page.html'), verificationHtml, 'utf8').catch(() => null);
+      }
+      await page.screenshot({ path: path.join(dir, 'okta-send-email-page.png'), fullPage: false }).catch(() => null);
+      throw new Error('Não consegui clicar automaticamente em "Send me an email".');
+    }
+  }
+
+  if (clickedSendCode) {
+    if (emailPostClickPauseMs > 0) {
+      metaState.steps.push(`email-verification -> post-send-click-pause (${emailPostClickPauseMs}ms)`);
+      console.log(`[transfer] ⏸  Pausa de ${emailPostClickPauseMs}ms após clicar em "Send me an email" para validação manual.`);
+      await page.waitForTimeout(emailPostClickPauseMs);
+    }
+    metaState.steps.push(`email-verification -> waiting-for-email-dispatch (${emailDispatchWaitMs}ms)`);
+    await page.waitForTimeout(emailDispatchWaitMs);
+    await page.waitForLoadState('domcontentloaded', { timeout: 5000 }).catch(() => null);
+  }
+
+  const code = await readLatestAmenVerificationCode(metaState);
+
+  await clickFirstVisible([
+    { name: 'use verification code instead', locator: page.getByRole('button', { name: /enter.*code|use.*code|verification code|c[oó]digo/i }) },
+    { name: 'use verification code link', locator: page.getByText(/enter.*code|use.*code|verification code|c[oó]digo/i) },
+  ], 'email-verification-open-code-entry').catch(() => false);
+
+  const codeFieldSelectors = [
+    'input[name="credentials.passcode"]',
+    'input[name="credentials.answer"]',
+    'input[data-se*="passcode" i]',
+    'input[data-se*="otp" i]',
+    'input[data-se*="verification" i]',
+    'input[name*="passcode" i]',
+    'input[id*="passcode" i]',
+    'input[name*="code" i]',
+    'input[id*="code" i]',
+    'input[name*="otp" i]',
+    'input[id*="otp" i]',
+    'input[autocomplete="one-time-code"]',
+    'input[inputmode="numeric"]',
+    'input[type="tel"]',
+    'input[type="text"]',
+  ];
+
+  await page.waitForFunction((selectors) => {
+    return selectors.some((selector) => {
+      const element = document.querySelector(selector);
+      if (!element) return false;
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+    });
+  }, codeFieldSelectors, { timeout: 15000 }).catch(() => null);
+
+  const filledCode = await fillFirstMatchingField(page, codeFieldSelectors, code, 'email-verification-code', metaState);
+
+  if (!filledCode) {
+    const verificationHtml = await page.content().catch(() => '');
+    if (verificationHtml) {
+      await fs.writeFile(path.join(dir, 'okta-verification-page.html'), verificationHtml, 'utf8').catch(() => null);
+    }
+    await page.screenshot({ path: path.join(dir, 'okta-verification-page.png'), fullPage: false }).catch(() => null);
+    throw new Error('Não encontrei o campo do código de verificação por email.');
+  }
+
+  const submittedCode = await clickFirstVisible([
+    { name: 'submit verification code', locator: page.getByRole('button', { name: /verify|verificar|confirm|continue|seguinte|submit/i }) },
+    { name: 'submit verification code fallback', locator: page.locator('button[type="submit"], input[type="submit"]') },
+  ], 'email-verification-submit');
+
+  if (!submittedCode) {
+    throw new Error('Não consegui submeter o código de verificação por email.');
+  }
+
+  await page.waitForURL((u) => /MYZ_Home\/Home|myzurich\.zurich\.com\.pt/i.test(u.toString()) || !/okta|sso/i.test(u.toString()), {
+    timeout: Math.max(loginLandingWaitTimeoutMs, emailVerificationWaitMs),
+  }).catch(() => null);
+
+  metaState.steps.push('email-verification -> submitted');
+  return true;
+}
+
+async function loadSimulationPayloadFromFile(filePath) {
+  const cleanedPath = cleanEnv(filePath);
+  if (!cleanedPath) return null;
+
+  const absolutePath = path.resolve(process.cwd(), cleanedPath);
+  const raw = await fs.readFile(absolutePath, 'utf8');
+  const payload = JSON.parse(raw);
+
+  return {
+    id: path.basename(absolutePath, path.extname(absolutePath)),
+    path: `file:${absolutePath}`,
+    payload,
+    raw: payload,
+  };
 }
 
 function getFirebaseClientConfigFromEnv() {
@@ -3206,6 +3715,95 @@ async function clickOptionCardByText(page, textRegex, stepLabel, preferredVisibl
   return true;
 }
 
+async function clickPlanCardActionByText(page, textRegex, stepLabel, preferredVisibleIndex = 0) {
+  const pattern = textRegex.source;
+  const flags = textRegex.flags;
+  const result = await page.evaluate(({ pattern, flags, preferredVisibleIndex }) => {
+    const regex = new RegExp(pattern, flags);
+    const actionRegex = /Selecionar|Seleccionar|Escolher|Aderir|Continuar|Seguinte/i;
+
+    const normalize = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+    const visible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+    };
+
+    const activate = (element) => {
+      if (!(element instanceof HTMLElement) || !visible(element)) return false;
+      element.scrollIntoView({ block: 'center', inline: 'center' });
+      element.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+      element.dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      element.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+      element.click();
+      return true;
+    };
+
+    const textNodes = Array.from(document.querySelectorAll('strong,h1,h2,h3,h4,p,span,div,label,li'));
+    const cards = [];
+    const seen = new Set();
+
+    for (const node of textNodes) {
+      if (!(node instanceof HTMLElement) || !visible(node)) continue;
+      const text = normalize(node.textContent || node.getAttribute('value') || '');
+      if (!text || !regex.test(text)) continue;
+
+      let current = node;
+      let card = null;
+      for (let depth = 0; current && depth < 8; depth += 1, current = current.parentElement) {
+        if (!(current instanceof HTMLElement) || !visible(current)) continue;
+        const currentText = normalize(current.textContent || current.getAttribute('value') || '');
+        if (!currentText || !regex.test(currentText)) continue;
+
+        const actions = Array.from(current.querySelectorAll('button,a,input[type="submit"],input[type="button"],[role="button"],label'))
+          .filter((element) => element instanceof HTMLElement && visible(element) && actionRegex.test(normalize(element.textContent || element.getAttribute('value') || '')));
+        if (actions.length) {
+          card = { element: current, actions, text: currentText };
+          break;
+        }
+      }
+
+      if (!card) continue;
+      const rect = card.element.getBoundingClientRect();
+      const key = `${Math.round(rect.left)}:${Math.round(rect.top)}:${Math.round(rect.width)}:${Math.round(rect.height)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      cards.push(card);
+    }
+
+    if (!cards.length) return { ok: false };
+    const chosenIndex = Math.min(preferredVisibleIndex, cards.length - 1);
+    const chosen = cards[chosenIndex];
+
+    for (const action of chosen.actions) {
+      if (activate(action)) {
+        return {
+          ok: true,
+          method: 'card-action',
+          index: chosenIndex,
+          text: normalize(action.textContent || action.getAttribute('value') || chosen.text),
+        };
+      }
+    }
+
+    if (activate(chosen.element)) {
+      return {
+        ok: true,
+        method: 'card',
+        index: chosenIndex,
+        text: chosen.text,
+      };
+    }
+
+    return { ok: false };
+  }, { pattern, flags, preferredVisibleIndex }).catch(() => ({ ok: false }));
+
+  if (!result?.ok) return false;
+  meta.steps.push(`${stepLabel} -> ${result.method} [${result.index}] (${result.text})`);
+  return true;
+}
+
 async function clickByTextFallback(textRegex, stepLabel) {
   const pattern = textRegex.source;
   const flags = textRegex.flags;
@@ -3328,14 +3926,42 @@ function isOwnDamageAutoSimulation(simulationPayload) {
     || rawType.includes('own damage');
 }
 
-async function selectNamedOptionStep(page, metaState, optionRegex, stepLabel) {
+async function selectNamedOptionStep(page, metaState, optionRegex, stepLabel, options = {}) {
+  const learnedSelector = String(options.learnedSelector || '').trim();
   await page.waitForLoadState('domcontentloaded', { timeout: Math.max(2500, finalStepNextPageWaitMs) }).catch(() => null);
   await page.waitForLoadState('networkidle', { timeout: Math.max(3000, finalStepNextPageWaitMs) }).catch(() => null);
-  await page.waitForTimeout(700);
+  await page.waitForTimeout(250);
 
-  const cardClicked = await clickOptionCardByText(page, optionRegex, `${stepLabel}-card`, 1);
+  if (learnedSelector) {
+    const learnedClicked = await clickForcedSelector(page, learnedSelector, `${stepLabel}-learned-selector`, metaState);
+    if (learnedClicked) {
+      await page.waitForTimeout(250);
+      metaState.steps.push(`${stepLabel} -> success`);
+      return true;
+    }
+  }
+
+  const planActionClicked = await clickPlanCardActionByText(page, optionRegex, `${stepLabel}-plan-card`, 0);
+  if (planActionClicked) {
+    await page.waitForTimeout(250);
+    metaState.steps.push(`${stepLabel} -> success`);
+    return true;
+  }
+
+  const selectButtonInMatchingCard = await clickVisibleByPreferredIndex([
+    { name: `${stepLabel} select button in card`, locator: page.locator('div,section,article,li').filter({ hasText: optionRegex }).locator('button,a,input[type="submit"],input[type="button"]').filter({ hasText: /Selecionar|Escolher|Aderir|Continuar|Seguinte/i }) },
+    { name: `${stepLabel} exact submit in card`, locator: page.locator('div,section,article,li').filter({ hasText: optionRegex }).locator('input[type="submit"][value*="Selecionar" i], input[type="button"][value*="Selecionar" i], input[type="submit"][value*="Seleccionar" i], input[type="button"][value*="Seleccionar" i], input[type="submit"][value*="Escolher" i], input[type="button"][value*="Escolher" i]') },
+  ], `${stepLabel}-select-button`, 0);
+
+  if (selectButtonInMatchingCard) {
+    await page.waitForTimeout(250);
+    metaState.steps.push(`${stepLabel} -> success`);
+    return true;
+  }
+
+  const cardClicked = await clickOptionCardByText(page, optionRegex, `${stepLabel}-card`, 0);
   if (cardClicked) {
-    await page.waitForTimeout(350);
+    await page.waitForTimeout(250);
     metaState.steps.push(`${stepLabel} -> success`);
     return true;
   }
@@ -3348,7 +3974,7 @@ async function selectNamedOptionStep(page, metaState, optionRegex, stepLabel) {
     { name: `${stepLabel} label`, locator: page.locator('label').filter({ hasText: optionRegex }) },
     { name: `${stepLabel} input value`, locator: page.locator('input[type="radio"], input[type="checkbox"]').filter({ hasText: optionRegex }) },
     { name: `${stepLabel} fallback text container`, locator: page.locator('a,button,div,span,li').filter({ hasText: optionRegex }) },
-  ], stepLabel, 1);
+  ], stepLabel, 0);
 
   if (!selected) {
     const fallbackSelected = await clickByTextFallback(optionRegex, `${stepLabel}-fallback`);
@@ -3358,19 +3984,19 @@ async function selectNamedOptionStep(page, metaState, optionRegex, stepLabel) {
     }
   }
 
-  await page.waitForTimeout(350);
+  await page.waitForTimeout(250);
   metaState.steps.push(`${stepLabel} -> success`);
   return true;
 }
 
 async function selectOpcaoBaseStep(page, metaState) {
   const baseRegex = /Opção\s*Base|Opcao\s*Base/i;
-  return selectNamedOptionStep(page, metaState, baseRegex, 'final-step-select-opcao-base');
+  return selectNamedOptionStep(page, metaState, baseRegex, 'final-step-select-opcao-base', { learnedSelector: learnedBaseCardSelector });
 }
 
 async function selectOpcaoEssencialStep(page, metaState) {
   const essentialRegex = /Opção\s*Essencial|Opcao\s*Essencial|Essencial/i;
-  return selectNamedOptionStep(page, metaState, essentialRegex, 'final-step-select-opcao-essencial');
+  return selectNamedOptionStep(page, metaState, essentialRegex, 'final-step-select-opcao-essencial', { learnedSelector: learnedEssencialCardSelector });
 }
 
 async function selectOpcaoPremiumStep(page, metaState) {
@@ -3541,13 +4167,20 @@ async function saveShot(name) {
 }
 
 try {
-  const simulationSource = preferLocalhostFirst
+  const explicitSimulationPayloadFile = cleanEnv(process.env.TRANSFER_SIMULATION_PAYLOAD_FILE);
+  const explicitSimulationSource = explicitSimulationPayloadFile
+    ? await loadSimulationPayloadFromFile(explicitSimulationPayloadFile).catch(() => null)
+    : null;
+
+  const simulationSource = explicitSimulationSource || (preferLocalhostFirst
     ? ((await loadLatestAutoSimulationFromLocalhost().catch(() => null)) ||
       (await loadLatestAutoSimulationPayload().catch(() => null)))
     : ((await loadLatestAutoSimulationPayload().catch(() => null)) ||
-      (await loadLatestAutoSimulationFromLocalhost().catch(() => null)));
+      (await loadLatestAutoSimulationFromLocalhost().catch(() => null))));
   const simulationPayload = simulationSource?.payload || {};
-  meta.simulationSourcePreference = preferLocalhostFirst ? 'localhost-first' : 'firestore-first';
+  meta.simulationSourcePreference = explicitSimulationSource
+    ? 'payload-file'
+    : (preferLocalhostFirst ? 'localhost-first' : 'firestore-first');
   meta.simulationSourcePath = simulationSource?.path || null;
   meta.simulationPayloadSample = {
     matricula: simulationPayload.matricula || null,
@@ -3611,6 +4244,14 @@ try {
     await updateDebugOverlay(page, 'login-step2-submitted');
   } else {
     meta.steps.push('login-step2-password-not-found');
+  }
+
+  const handledEmailVerification = await completeEmailVerificationIfPresent(page, meta).catch((error) => {
+    meta.steps.push(`email-verification -> error: ${error instanceof Error ? error.message : String(error)}`);
+    throw error;
+  });
+  if (handledEmailVerification) {
+    await updateDebugOverlay(page, 'email-verification-submitted');
   }
 
   await page.waitForURL((u) => u.toString().includes('/MYZ_Home/Home'), { timeout: loginLandingWaitTimeoutMs }).catch(() => null);
@@ -4107,6 +4748,37 @@ try {
         if (!reachedCoberturas) {
           await navigateDirectlyToCoberturasStep(page, meta);
         }
+
+        if (shouldDragCoberturasSlider || shouldCalculateCoberturasAfterDrag || shouldPauseBeforeCoberturasCalculator || shouldPauseBeforeCoberturasReceiptDetails || shouldPauseAfterCoberturasSlider || shouldPauseBeforeAccordionScrape || shouldScrapeAccordionBeforeCalcular || shouldScrapeAccordionAfterSlider) {
+          meta.steps.push('third-party-coberturas-flow -> drag-coberturas-slider');
+          await dragCoberturasSliderStep(page, meta);
+        }
+        if (shouldPauseAfterCoberturasSlider) {
+          meta.steps.push('third-party-coberturas-flow -> pause-coberturas-apos-slider');
+          await pauseAfterCoberturasSlider(page, meta);
+          throw new ControlledPauseStop();
+        }
+        if (shouldPauseBeforeCoberturasCalculator) {
+          meta.steps.push('third-party-coberturas-flow -> pause-coberturas-calculadora');
+          await pauseBeforeCoberturasCalculator(page, meta);
+          throw new ControlledPauseStop();
+        }
+        if (shouldCalculateCoberturasAfterDrag || shouldPauseBeforeAccordionScrape || shouldScrapeAccordionBeforeCalcular || shouldScrapeAccordionAfterSlider) {
+          meta.steps.push('third-party-coberturas-flow -> click-coberturas-calcular');
+          const clickedCalcular = await clickCoberturasCalcularStep(page, meta);
+          if (clickedCalcular) {
+            await waitForCoberturasCalculatedValue(page, meta).catch(() => null);
+          }
+          if (shouldPauseBeforeAccordionScrape || shouldScrapeAccordionBeforeCalcular || shouldScrapeAccordionAfterSlider) {
+            const alreadyHasValues = meta.accordionValues && Object.values(meta.accordionValues).some(Boolean);
+            if (alreadyHasValues) {
+              meta.steps.push('third-party-coberturas-flow -> accordion-values-already-captured, skip pause');
+            } else {
+              meta.steps.push('third-party-coberturas-flow -> pause-accordion-scrape');
+              await pauseAndScrapeAccordionValues(page, meta);
+            }
+          }
+        }
       }
     } else {
       meta.steps.push(`final-step-decision -> skipped-non-third-party-coberturas (${simulationPayload.tipoSeguro || 'empty'})`);
@@ -4156,19 +4828,8 @@ try {
       // Para Terceiros: não há página Resumo — selecionar Essencial e avançar para Coberturas diretamente
       if (isThirdPartyAutoSimulation(simulationPayload)) {
         meta.steps.push(`final-step-decision -> terceiros-drag-flow (${simulationPayload.tipoSeguro})`);
-        // Selecionar card Base: usar seletor aprendido se disponível, senão pausar para aprender
-        let baseSelected = false;
-        if (learnedBaseCardSelector) {
-          meta.steps.push(`terceiros-drag-flow -> base-card-learned (${learnedBaseCardSelector})`);
-          await page.locator(learnedBaseCardSelector).click({ timeout: 8000 }).catch(() => null);
-          await page.waitForLoadState('networkidle', { timeout: 6000 }).catch(() => null);
-          await page.waitForTimeout(400);
-          baseSelected = true;
-        } else {
-          meta.steps.push('terceiros-drag-flow -> base-card-pause (sem seletor aprendido)');
-          baseSelected = await pauseAndLearnBaseCardStep(page, meta);
-        }
-        if (baseSelected) {
+        const essencialSelected = await selectOpcaoEssencialStep(page, meta);
+        if (essencialSelected) {
           const clickedCoberturasNav = await clickCoberturasStepNavigation(page, meta);
           if (!clickedCoberturasNav) {
             await clickLowerSeguinteStep(page, meta);
@@ -4177,7 +4838,6 @@ try {
           if (!reachedCoberturas) {
             await navigateDirectlyToCoberturasStep(page, meta);
           }
-          // Opção Base não inclui Quebra de Vidros — sem necessidade de uncheck
           if (shouldDragCoberturasSlider || shouldCalculateCoberturasAfterDrag || shouldPauseBeforeCoberturasCalculator || shouldPauseBeforeCoberturasReceiptDetails || shouldPauseAfterCoberturasSlider || shouldPauseBeforeAccordionScrape || shouldScrapeAccordionBeforeCalcular || shouldScrapeAccordionAfterSlider) {
             meta.steps.push('terceiros-drag-flow -> drag-coberturas-slider');
             await dragCoberturasSliderStep(page, meta);

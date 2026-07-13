@@ -1,0 +1,18 @@
+{
+  "nome": "Cliente Teste Zurich",
+  "email": "cliente.zurich@example.com",
+  "matricula": "11-AA-22",
+  "codigoPostal": "1000-100",
+  "dataNascimento": "1988-05-10",
+  "contribuinte": "220895864",
+  "marca": "Peugeot",
+  "modelo": "208",
+  "versao": "1.2 PureTech",
+  "ano": "2021",
+  "tipoSeguro": "Contra Terceiros",
+  "coberturas": [
+    "Responsabilidade civil",
+    "Assistência em viagem"
+  ],
+  "outrosPedidos": "Payload local para BDD Zurich real"
+}

@@ -8,6 +8,24 @@ const POLL_INTERVAL_MS = Number(process.env.TRANSFER_POLL_INTERVAL_MS ?? 5000);
 const workerId = process.env.TRANSFER_WORKER_ID ?? `worker-${randomUUID().slice(0, 8)}`;
 const DEFAULT_TARGET_URL = 'https://myzurich.zurich.com.pt/';
 
+function credentialHealthSummary() {
+  const username = String(process.env.TRANSFER_LOGIN_USERNAME || '').trim();
+  const password = String(process.env.TRANSFER_LOGIN_PASSWORD || '');
+  const loginRequired = String(process.env.TRANSFER_LOGIN_REQUIRED || 'false').trim().toLowerCase() === 'true';
+
+  const maskedUsername = username
+    ? `${username.slice(0, 2)}***${username.slice(-2)}`
+    : 'missing';
+
+  return {
+    loginRequired,
+    hasUsername: Boolean(username),
+    hasPassword: Boolean(password),
+    usernameMasked: maskedUsername,
+    passwordLength: password.length,
+  };
+}
+
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -102,8 +120,13 @@ async function start() {
   initializeAdmin();
   const db = admin.firestore();
   const runOnce = process.argv.includes('--once');
+  const credentialHealth = credentialHealthSummary();
 
   console.log(`[playwright-transfer] started as ${workerId}, collection=${JOBS_COLLECTION}`);
+  console.log(`[playwright-transfer] login health required=${credentialHealth.loginRequired} user=${credentialHealth.usernameMasked} password=${credentialHealth.hasPassword ? `set(${credentialHealth.passwordLength})` : 'missing'}`);
+  if (credentialHealth.loginRequired && (!credentialHealth.hasUsername || !credentialHealth.hasPassword)) {
+    console.warn('[playwright-transfer] WARNING: missing TRANSFER_LOGIN_USERNAME or TRANSFER_LOGIN_PASSWORD in current environment');
+  }
 
   do {
     const handled = await processOneJob(db);

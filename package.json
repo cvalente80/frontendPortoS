@@ -12,6 +12,12 @@
     "test:rules": "node tests/chat-rules-test.mjs",
     "emulators:test:rules": "firebase emulators:exec 'node tests/chat-rules-test.mjs' --only firestore",
     "pw:install": "playwright install chromium",
+    "pw:bdd": "cucumber-js --config cucumber.cjs",
+    "pw:bdd:demo": "cucumber-js --config cucumber.cjs --tags @demo",
+    "pw:bdd:zurich": "cucumber-js --config cucumber.cjs --tags @zurich-real",
+    "pw:bdd:zurich:dry": "cucumber-js --config cucumber.cjs --tags @zurich-real --dry-run",
+    "pw:bdd:zurich:live": "cucumber-js --config cucumber.cjs --tags @zurich-live",
+    "pw:e2e:zurich:real": "TRANSFER_SOURCE_PREFERENCE=payload-file TRANSFER_SIMULATION_PAYLOAD_FILE=scripts/playwright-transfer/sample-zurich-auto-job.json TRANSFER_FINAL_STEP_ACTIONS=terceiros-essencial-coberturas,click-coberturas-calcular TRANSFER_EMAIL_VERIFICATION_ENABLED=true TRANSFER_EMAIL_SEND_MANUAL=false TRANSFER_EMAIL_PRE_SEND_PAUSE_MS=0 TRANSFER_EMAIL_POST_CLICK_PAUSE_MS=0 PW_HEADLESS=false node --env-file=.env.local --env-file=.env.playwright.local scripts/playwright-transfer/navigate-zurich-auto.mjs",
     "pw:transfer:local": "node scripts/playwright-transfer/run-local-job.mjs",
     "pw:transfer:local:secrets": "node --env-file=.env.playwright.local scripts/playwright-transfer/run-local-job.mjs",
     "pw:transfer:worker": "node scripts/playwright-transfer/worker.mjs --once",
@@ -53,7 +59,8 @@
     "pw:validate:local-to-zurich:headed": "PW_HEADLESS=false PW_SLOW_MO=20 node scripts/playwright-transfer/fill-local-auto-simulation.mjs && TRANSFER_SOURCE_PREFERENCE=localhost TRANSFER_MATRICULA_LUPA_CLICKS=2 PW_HEADLESS=false PW_SLOW_MO=20 node --env-file=.env.local --env-file=.env.playwright.local scripts/playwright-transfer/navigate-zurich-auto.mjs",
     "pw:watcher": "node --env-file=.env.local --env-file=.env.playwright.local scripts/playwright-transfer/local-queue-watcher.mjs",
     "pw:watcher:headless": "PW_HEADLESS=true PW_SLOW_MO=0 node --env-file=.env.local --env-file=.env.playwright.local scripts/playwright-transfer/local-queue-watcher.mjs",
-    "pw:watcher:prod": "WATCHER_ENV=production node --env-file=.env.local --env-file=.env.playwright.prod scripts/playwright-transfer/local-queue-watcher.mjs"
+    "pw:watcher:prod": "WATCHER_ENV=production node --env-file=.env.local --env-file=.env.playwright.prod scripts/playwright-transfer/local-queue-watcher.mjs",
+    "pw:job:requeue": "node --env-file=.env.local scripts/playwright-transfer/requeue-job.mjs"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",
@@ -72,16 +79,17 @@
     "tailwindcss": "^3.4.17"
   },
   "devDependencies": {
+    "@cucumber/cucumber": "^12.9.0",
     "@eslint/js": "^9.33.0",
+    "@firebase/rules-unit-testing": "^5.0.0",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^5.0.0",
-    "firebase-admin": "^13.4.0",
     "eslint": "^9.33.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
+    "firebase-admin": "^13.4.0",
     "globals": "^16.3.0",
-    "@firebase/rules-unit-testing": "^5.0.0",
     "playwright": "^1.52.0",
     "typescript": "^5.9.2",
     "vite": "^7.1.2"
