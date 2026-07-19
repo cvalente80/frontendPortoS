@@ -2804,6 +2804,38 @@ async function enrichCoberturasReceiptDetails(page, metaState) {
   return details;
 }
 
+function ensureAccordionValuesFallbackFromPremium(metaState, sourceLabel = 'fallback') {
+  const existing = metaState.accordionValues || null;
+  const hasExisting = !!existing && Object.values(existing).some(Boolean);
+  if (hasExisting) return false;
+
+  const premium = String(metaState.coberturasPremiumTotal || metaState.coberturasCalculatedValue || '').trim();
+  if (!premium) return false;
+
+  metaState.accordionValues = {
+    anual: premium,
+    mensal: null,
+    mensal_primeiro: null,
+    trimestral: null,
+    trimestral_primeiro: null,
+    semestral: null,
+    semestral_primeiro: null,
+  };
+
+  if (!metaState.coberturasReceiptDetails || !metaState.coberturasReceiptDetails.anual) {
+    metaState.coberturasReceiptDetails = {
+      ...(metaState.coberturasReceiptDetails || {}),
+      anual: premium,
+      mensal: metaState.coberturasReceiptDetails?.mensal || null,
+      trimestral: metaState.coberturasReceiptDetails?.trimestral || null,
+      semestral: metaState.coberturasReceiptDetails?.semestral || null,
+    };
+  }
+
+  metaState.steps.push(`accordion-fallback -> anual from premium total (${premium}) [${sourceLabel}]`);
+  return true;
+}
+
 async function readCoberturasLoadingIndicators(page) {
   return page.evaluate(() => {
     function normalizeText(value) {
@@ -2959,6 +2991,7 @@ async function waitForCoberturasCalculatedValue(page, metaState) {
       if (shouldPauseBeforeAccordionScrape || shouldScrapeAccordionBeforeCalcular || shouldScrapeAccordionAfterSlider) {
         await scrapeAccordionValues(page, metaState);
       }
+      ensureAccordionValuesFallbackFromPremium(metaState, 'total-panel');
       await captureCoberturasPremiumScreenshot(page, metaState, totalPanelSummary.premiumTotal);
       if (totalPanelSummary.excludedInstallmentValues?.length) {
         metaState.steps.push(`final-step-coberturas-valor-filtrado -> ${totalPanelSummary.excludedInstallmentValues.length} prestações ignoradas`);
@@ -2988,6 +3021,7 @@ async function waitForCoberturasCalculatedValue(page, metaState) {
     if (shouldPauseBeforeAccordionScrape || shouldScrapeAccordionBeforeCalcular || shouldScrapeAccordionAfterSlider) {
       await scrapeAccordionValues(page, metaState);
     }
+    ensureAccordionValuesFallbackFromPremium(metaState, 'total-panel-fallback');
     await captureCoberturasPremiumScreenshot(page, metaState, fallbackPanelSummary.premiumTotal);
     return true;
   }
@@ -3012,6 +3046,7 @@ async function waitForCoberturasCalculatedValue(page, metaState) {
     if (shouldPauseBeforeAccordionScrape || shouldScrapeAccordionBeforeCalcular || shouldScrapeAccordionAfterSlider) {
       await scrapeAccordionValues(page, metaState);
     }
+    ensureAccordionValuesFallbackFromPremium(metaState, 'premium-summary-fallback');
     await captureCoberturasPremiumScreenshot(page, metaState, fallbackSummary.premiumTotal);
     return true;
   }
