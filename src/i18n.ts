@@ -532,6 +532,9 @@ const resources = {
       },
       validations: {
         under18: 'Apenas condutores com 18 anos ou mais podem prosseguir.',
+        birthDateRequired: 'Por favor, preencha a data de nascimento.',
+        licenseDateRequired: 'Por favor, preencha a data da carta de condução.',
+        dateFormat: 'Por favor, introduza a data no formato dd-mm-aaaa.',
         nameFull: 'Por favor, indique o nome completo (pelo menos dois nomes).',
         emailRequired: 'Por favor, preencha o email.',
         emailInvalid: 'Por favor, insira um email válido.',
@@ -737,6 +740,9 @@ const resources = {
         selectType: 'Por favor, selecione o tipo de seguro.',
         submitSuccess: 'Pedido enviado com sucesso!',
         submitEmailError: 'Pedido submetido, mas houve erro ao enviar o email.',
+        birthDateRequired: 'Por favor, preencha a data de nascimento.',
+        licenseDateRequired: 'Por favor, preencha a data da carta de condução.',
+        dateFormat: 'Por favor, introduza a data no formato dd-mm-aaaa.',
         under18: 'Apenas condutores com 18 anos ou mais podem prosseguir.'
       },
       summary: {
@@ -1704,6 +1710,9 @@ const resources = {
       },
       validations: {
         under18: 'Only drivers aged 18 or older can proceed.',
+        birthDateRequired: 'Please fill in the date of birth.',
+        licenseDateRequired: 'Please fill in the driving licence issue date.',
+        dateFormat: 'Please enter the date in the format dd-mm-yyyy.',
         nameFull: 'Please enter your full name (at least two names).',
         emailRequired: 'Please fill in your email.',
         emailInvalid: 'Enter a valid email.',
@@ -1909,6 +1918,9 @@ const resources = {
         selectType: 'Please select the insurance type.',
         submitSuccess: 'Request sent successfully!',
         submitEmailError: 'Request submitted, but there was an error sending the email.',
+        birthDateRequired: 'Please fill in the date of birth.',
+        licenseDateRequired: 'Please fill in the driving licence issue date.',
+        dateFormat: 'Please enter the date in the format dd-mm-yyyy.',
         under18: 'Only drivers aged 18 or older can proceed.'
       },
       summary: {

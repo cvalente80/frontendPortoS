@@ -162,9 +162,10 @@ export default function SimulacaoAuto() {
         const thirdParty = t('typeThirdParty');
         const ownDamage = t('typeOwnDamage');
         if (value === thirdParty) {
-          // Pré-selecionar Ocupantes e Assistência em Viagem (obrigatórias)
+          // Pré-selecionar Ocupantes e Assistência em Viagem (obrigatórias) e Vidros (removível)
           const defaults = [
             t('coverageLabels.occupants'),
+            t('coverageLabels.glass'),
             t('coverageLabels.assistance'),
           ];
           setForm(prev => ({ ...prev, tipoSeguro: value, coberturas: defaults }));
@@ -186,11 +187,66 @@ export default function SimulacaoAuto() {
     (e.target as HTMLInputElement | HTMLSelectElement).setCustomValidity(message);
   }
 
+  function normalizeManualDateInput(value: string) {
+    const digits = value.replace(/\D/g, '').slice(0, 8);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4)}`;
+  }
+
+  function parseManualDateToIso(value: string) {
+    const normalized = normalizeManualDateInput(value);
+    if (!/^\d{2}-\d{2}-\d{4}$/.test(normalized)) return null;
+
+    const [day, month, year] = normalized.split('-').map(Number);
+    const parsed = new Date(Date.UTC(year, month - 1, day));
+
+    if (
+      parsed.getUTCFullYear() !== year ||
+      parsed.getUTCMonth() !== month - 1 ||
+      parsed.getUTCDate() !== day
+    ) {
+      return null;
+    }
+
+    return `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+  }
+
+  function handleManualDateChange(
+    isoField: 'dataNascimento' | 'dataCartaConducao',
+    manualField: 'dataNascimentoManual' | 'dataCartaConducaoManual',
+    rawValue: string,
+    clearError: React.Dispatch<React.SetStateAction<string>>,
+  ) {
+    const manual = normalizeManualDateInput(rawValue);
+    const iso = parseManualDateToIso(manual);
+
+    setForm(prev => ({
+      ...prev,
+      [manualField]: manual,
+      [isoField]: manual.length === 10 && iso ? iso : '',
+    } as FormState));
+
+    if (!manual || iso) clearError('');
+  }
+
+  function validateManualDateField(value: string, requiredMessage: string) {
+    if (!value) return requiredMessage;
+    if (!parseManualDateToIso(value)) return t('validations.dateFormat');
+    return '';
+  }
+
   function validarDatas() {
-    // Sem validação manual de formato, apenas obrigatório
-    setErroNascimento("");
-    setErroCarta("");
-    return true;
+    const nascimentoManual = form.dataNascimentoManual || (form.dataNascimento ? formatDate(form.dataNascimento) : '');
+    const cartaManual = form.dataCartaConducaoManual || (form.dataCartaConducao ? formatDate(form.dataCartaConducao) : '');
+
+    const erroNascimentoAtual = validateManualDateField(nascimentoManual, t('validations.birthDateRequired'));
+    const erroCartaAtual = validateManualDateField(cartaManual, t('validations.licenseDateRequired'));
+
+    setErroNascimento(erroNascimentoAtual);
+    setErroCarta(erroCartaAtual);
+
+    return !erroNascimentoAtual && !erroCartaAtual;
   }
 
   function validarNIF(nif: string): boolean {
@@ -429,6 +485,7 @@ export default function SimulacaoAuto() {
   }
 
   function formatDate(dateStr: string) {
+    if (!dateStr) return '';
     const [year, month, day] = dateStr.split('-');
     return `${day}-${month}-${year}`;
   }
@@ -536,9 +593,13 @@ export default function SimulacaoAuto() {
                       const [year, month, day] = iso.split('-');
                       const manual = `${day}-${month}-${year}`;
                       setForm(f => ({ ...f, dataNascimento: iso, dataNascimentoManual: manual }));
+                      setErroNascimento('');
                     } else {
                       setForm(f => ({ ...f, dataNascimento: "", dataNascimentoManual: "" }));
                     }
+                  }}
+                  onChangeRaw={e => {
+                    handleManualDateChange('dataNascimento', 'dataNascimentoManual', (e?.target as HTMLInputElement | null)?.value || '', setErroNascimento);
                   }}
                   locale={base}
                   dateFormat="dd-MM-yyyy"
@@ -559,10 +620,17 @@ export default function SimulacaoAuto() {
                       className: 'as-input border-blue-300 pr-10',
                       value: form.dataNascimentoManual || '',
                       required: true,
-                      readOnly: true,
+                      inputMode: 'numeric',
                       placeholder: t('placeholders.birthDate')
                     })
                   }
+                  onBlur={() => {
+                    const message = validateManualDateField(
+                      form.dataNascimentoManual || (form.dataNascimento ? formatDate(form.dataNascimento) : ''),
+                      t('validations.birthDateRequired')
+                    );
+                    setErroNascimento(message);
+                  }}
                   open={openNascimento}
                   onClickOutside={() => setOpenNascimento(false)}
                   calendarClassName="relative"
@@ -613,9 +681,13 @@ export default function SimulacaoAuto() {
                       const [year, month, day] = iso.split('-');
                       const manual = `${day}-${month}-${year}`;
                       setForm(f => ({ ...f, dataCartaConducao: iso, dataCartaConducaoManual: manual }));
+                      setErroCarta('');
                     } else {
                       setForm(f => ({ ...f, dataCartaConducao: "", dataCartaConducaoManual: "" }));
                     }
+                  }}
+                  onChangeRaw={e => {
+                    handleManualDateChange('dataCartaConducao', 'dataCartaConducaoManual', (e?.target as HTMLInputElement | null)?.value || '', setErroCarta);
                   }}
                   locale={base}
                   dateFormat="dd-MM-yyyy"
@@ -636,10 +708,17 @@ export default function SimulacaoAuto() {
                       className: 'as-input border-blue-300 pr-10',
                       value: form.dataCartaConducaoManual !== undefined ? form.dataCartaConducaoManual : (form.dataCartaConducao ? formatDate(form.dataCartaConducao) : ''),
                       required: true,
-                      readOnly: true,
+                      inputMode: 'numeric',
                       placeholder: t('placeholders.licenseDate')
                     })
                   }
+                  onBlur={() => {
+                    const message = validateManualDateField(
+                      form.dataCartaConducaoManual || (form.dataCartaConducao ? formatDate(form.dataCartaConducao) : ''),
+                      t('validations.licenseDateRequired')
+                    );
+                    setErroCarta(message);
+                  }}
                   open={openCarta}
                   onClickOutside={() => setOpenCarta(false)}
                   calendarClassName="relative"

@@ -91,6 +91,55 @@ export default function ProdutoFrota() {
   function setCustomValidity(e: React.FormEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>, message: string) {
     (e.target as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement).setCustomValidity(message);
   }
+
+  function normalizeManualDateInput(value: string) {
+    const digits = value.replace(/\D/g, '').slice(0, 8);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 4) return `${digits.slice(0, 2)}-${digits.slice(2)}`;
+    return `${digits.slice(0, 2)}-${digits.slice(2, 4)}-${digits.slice(4)}`;
+  }
+
+  function parseManualDateToIso(value: string) {
+    const normalized = normalizeManualDateInput(value);
+    if (!/^\d{2}-\d{2}-\d{4}$/.test(normalized)) return null;
+
+    const [day, month, year] = normalized.split('-').map(Number);
+    const parsed = new Date(Date.UTC(year, month - 1, day));
+
+    if (
+      parsed.getUTCFullYear() !== year ||
+      parsed.getUTCMonth() !== month - 1 ||
+      parsed.getUTCDate() !== day
+    ) {
+      return null;
+    }
+
+    return `${year.toString().padStart(4, '0')}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`;
+  }
+
+  function handleManualDateChange(
+    isoField: 'dataNascimento' | 'dataCartaConducao',
+    manualField: 'dataNascimentoManual' | 'dataCartaConducaoManual',
+    rawValue: string,
+    clearError: React.Dispatch<React.SetStateAction<string>>,
+  ) {
+    const manual = normalizeManualDateInput(rawValue);
+    const iso = parseManualDateToIso(manual);
+
+    setForm(prev => ({
+      ...prev,
+      [manualField]: manual,
+      [isoField]: manual.length === 10 && iso ? iso : '',
+    } as FormState));
+
+    if (!manual || iso) clearError('');
+  }
+
+  function validateManualDateField(value: string, requiredMessage: string) {
+    if (!value) return requiredMessage;
+    if (!parseManualDateToIso(value)) return t('messages.dateFormat');
+    return '';
+  }
   function validarNIF(nif: string): boolean {
     if (!/^[0-9]{9}$/.test(nif)) return false;
     const n = nif.split('').map(Number);
@@ -157,7 +206,18 @@ export default function ProdutoFrota() {
     setForm(prev => ({ ...prev, viaturas: prev.viaturas.length > 1 ? prev.viaturas.filter((_, i) => i !== idx) : prev.viaturas }));
   }
 
-  function validarDatas() { setErroNascimento(""); setErroCarta(""); return true; }
+  function validarDatas() {
+    const nascimentoManual = form.dataNascimentoManual || (form.dataNascimento ? formatDate(form.dataNascimento) : '');
+    const cartaManual = form.dataCartaConducaoManual || (form.dataCartaConducao ? formatDate(form.dataCartaConducao) : '');
+
+    const erroNascimentoAtual = validateManualDateField(nascimentoManual, t('messages.birthDateRequired'));
+    const erroCartaAtual = validateManualDateField(cartaManual, t('messages.licenseDateRequired'));
+
+    setErroNascimento(erroNascimentoAtual);
+    setErroCarta(erroCartaAtual);
+
+    return !erroNascimentoAtual && !erroCartaAtual;
+  }
 
   function handleNext(e: FormEvent) {
     e.preventDefault();
@@ -181,6 +241,7 @@ export default function ProdutoFrota() {
   function handlePrev(e: FormEvent) { e.preventDefault(); setStep(s => s - 1); }
 
   function formatDate(dateStr: string) {
+    if (!dateStr) return '';
     const [year, month, day] = dateStr.split('-');
     return `${day}-${month}-${year}`;
   }
@@ -349,9 +410,13 @@ export default function ProdutoFrota() {
                       const [year, month, day] = iso.split('-');
                       const manual = `${day}-${month}-${year}`;
                       setForm(f => ({ ...f, dataNascimento: iso, dataNascimentoManual: manual }));
+                      setErroNascimento('');
                     } else {
                       setForm(f => ({ ...f, dataNascimento: "", dataNascimentoManual: "" }));
                     }
+                  }}
+                  onChangeRaw={e => {
+                    handleManualDateChange('dataNascimento', 'dataNascimentoManual', (e?.target as HTMLInputElement | null)?.value || '', setErroNascimento);
                   }}
                   locale={base}
                   dateFormat="dd-MM-yyyy"
@@ -366,7 +431,14 @@ export default function ProdutoFrota() {
                   yearDropdownItemNumber={100}
                   scrollableYearDropdown
                   value={form.dataNascimentoManual || ""}
-                  customInput={React.createElement('input', { type: 'text', className: 'as-input py-3 border-blue-300 pr-10', value: form.dataNascimentoManual || '', required: true, readOnly: true, placeholder: t('placeholders.birthDate') })}
+                  customInput={React.createElement('input', { type: 'text', className: 'as-input py-3 border-blue-300 pr-10', value: form.dataNascimentoManual || '', required: true, inputMode: 'numeric', placeholder: t('placeholders.birthDate') })}
+                  onBlur={() => {
+                    const message = validateManualDateField(
+                      form.dataNascimentoManual || (form.dataNascimento ? formatDate(form.dataNascimento) : ''),
+                      t('messages.birthDateRequired')
+                    );
+                    setErroNascimento(message);
+                  }}
                   open={openNascimento}
                   onClickOutside={() => setOpenNascimento(false)}
                   renderCustomHeader={props => (
@@ -410,7 +482,20 @@ export default function ProdutoFrota() {
               <div className="w-full mt-2 relative">
                 <DatePicker
                   selected={form.dataCartaConducao ? new Date(form.dataCartaConducao) : null}
-                  onChange={date => setForm(f => ({ ...f, dataCartaConducao: date ? date.toISOString().slice(0, 10) : "" }))}
+                  onChange={date => {
+                    if (date) {
+                      const iso = date.toISOString().slice(0, 10);
+                      const [year, month, day] = iso.split('-');
+                      const manual = `${day}-${month}-${year}`;
+                      setForm(f => ({ ...f, dataCartaConducao: iso, dataCartaConducaoManual: manual }));
+                      setErroCarta('');
+                    } else {
+                      setForm(f => ({ ...f, dataCartaConducao: "", dataCartaConducaoManual: "" }));
+                    }
+                  }}
+                  onChangeRaw={e => {
+                    handleManualDateChange('dataCartaConducao', 'dataCartaConducaoManual', (e?.target as HTMLInputElement | null)?.value || '', setErroCarta);
+                  }}
                   locale={base}
                   dateFormat="dd-MM-yyyy"
                   placeholderText={t('placeholders.licenseDate')}
@@ -423,8 +508,15 @@ export default function ProdutoFrota() {
                   showYearDropdown
                   yearDropdownItemNumber={100}
                   scrollableYearDropdown
-                  value={form.dataCartaConducao ? `${formatDate(form.dataCartaConducao)}` : ""}
-                  customInput={React.createElement('input', { type: 'text', className: 'as-input py-3 border-blue-300 pr-10', value: form.dataCartaConducaoManual !== undefined ? form.dataCartaConducaoManual : (form.dataCartaConducao ? formatDate(form.dataCartaConducao) : ''), required: true, readOnly: true, placeholder: t('placeholders.licenseDate') })}
+                  value={form.dataCartaConducaoManual || ""}
+                  customInput={React.createElement('input', { type: 'text', className: 'as-input py-3 border-blue-300 pr-10', value: form.dataCartaConducaoManual !== undefined ? form.dataCartaConducaoManual : (form.dataCartaConducao ? formatDate(form.dataCartaConducao) : ''), required: true, inputMode: 'numeric', placeholder: t('placeholders.licenseDate') })}
+                  onBlur={() => {
+                    const message = validateManualDateField(
+                      form.dataCartaConducaoManual || (form.dataCartaConducao ? formatDate(form.dataCartaConducao) : ''),
+                      t('messages.licenseDateRequired')
+                    );
+                    setErroCarta(message);
+                  }}
                   open={openCarta}
                   onClickOutside={() => setOpenCarta(false)}
                   renderCustomHeader={props => (
