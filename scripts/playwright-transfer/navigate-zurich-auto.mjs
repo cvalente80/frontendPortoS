@@ -2354,12 +2354,7 @@ function parseCoberturasReceiptDetails(panelText) {
     { key: 'trimestral', regex: /\btrimestral(?:idade|idades|mente|es)?\b/i },
     { key: 'semestral', regex: /\bsemestral(?:idade|idades|mente|es)?\b/i },
   ];
-  const values = {
-    anual: null,
-    mensal: null,
-    trimestral: null,
-    semestral: null,
-  };
+  const values = { anual: null, mensal: null, trimestral: null, semestral: null, anual_multibanco: null, mensal_multibanco: null, trimestral_multibanco: null, semestral_multibanco: null };
   const contexts = {
     anual: null,
     mensal: null,
@@ -2371,9 +2366,11 @@ function parseCoberturasReceiptDetails(panelText) {
     for (const label of labels) {
       if (values[label.key] || !label.regex.test(line)) continue;
       const nearbyText = [line, lines[index + 1], lines[index + 2], lines[index - 1]].filter(Boolean).join(' ');
-      const amount = extractFirstAmount(nearbyText);
+      const amounts = Array.from(nearbyText.matchAll(/\b\d{1,3}(?:[.\s]\d{3})*,\d{2}(?:\s*€)?/g)).map((match) => match[0].trim());
+      const amount = amounts.at(-1) || extractFirstAmount(nearbyText);
       if (amount) {
         values[label.key] = amount;
+        values[`${label.key}_multibanco`] = amounts[0] || amount;
         contexts[label.key] = nearbyText;
       }
     }
@@ -2388,6 +2385,7 @@ function parseCoberturasReceiptDetails(panelText) {
       const match = sectionText.match(pattern);
       if (match?.[1]) {
         values[label.key] = match[1].trim();
+        values[`${label.key}_multibanco`] = match[1].trim();
         contexts[label.key] = match[0].trim();
       }
     }
@@ -2399,6 +2397,10 @@ function parseCoberturasReceiptDetails(panelText) {
     mensal: values.mensal,
     trimestral: values.trimestral,
     semestral: values.semestral,
+    anual_multibanco: values.anual_multibanco,
+    mensal_multibanco: values.mensal_multibanco,
+    trimestral_multibanco: values.trimestral_multibanco,
+    semestral_multibanco: values.semestral_multibanco,
     anualContext: contexts.anual,
     mensalContext: contexts.mensal,
     trimestralContext: contexts.trimestral,
@@ -2602,7 +2604,16 @@ async function scrapeAccordionValues(page, metaState) {
     const details = parseCoberturasReceiptDetails(panelText);
     if (details.hasAny) {
       metaState.steps.push(`accordion-scrape -> panel-selector anual=${details.anual || '-'} mensal=${details.mensal || '-'} trimestral=${details.trimestral || '-'} semestral=${details.semestral || '-'}`);
-      metaState.accordionValues = { anual: details.anual || null, mensal: details.mensal || null, trimestral: details.trimestral || null, semestral: details.semestral || null };
+      metaState.accordionValues = {
+        anual: details.anual || null,
+        mensal: details.mensal || null,
+        trimestral: details.trimestral || null,
+        semestral: details.semestral || null,
+        anual_multibanco: details.anual_multibanco || null,
+        mensal_multibanco: details.mensal_multibanco || null,
+        trimestral_multibanco: details.trimestral_multibanco || null,
+        semestral_multibanco: details.semestral_multibanco || null,
+      };
       metaState.accordionRawText = details.rawText || null;
       return details;
     }
@@ -2617,7 +2628,16 @@ async function scrapeAccordionValues(page, metaState) {
       { key: 'trimestral', re: /\btrimestral/i },
       { key: 'mensal', re: /\bmensal/i },
     ];
-    const found = { anual: null, semestral: null, trimestral: null, mensal: null };
+    const found = {
+      anual: null,
+      semestral: null,
+      trimestral: null,
+      mensal: null,
+      anual_multibanco: null,
+      semestral_multibanco: null,
+      trimestral_multibanco: null,
+      mensal_multibanco: null,
+    };
     const contexts = { anual: null, semestral: null, trimestral: null, mensal: null };
 
     // Extrai AMBOS os valores SDD (Débito Direto) de um bloco de texto de periodicidade.
@@ -2625,22 +2645,26 @@ async function scrapeAccordionValues(page, metaState) {
     // O valor SDD é SEMPRE o último da linha (coluna da direita).
     function extractBothValues(scopeText) {
       const amounts = Array.from(scopeText.matchAll(amountRe)).map(m => m[0].trim()).filter(a => !/^-\s*$/.test(a));
-      if (!amounts.length) return { seguintes: null, primeiro: null };
+      if (!amounts.length) return { seguintes: null, primeiro: null, multibanco: null, multibancoPrimeiro: null };
 
       // Extrair todos os valores após "1ª Recibo Cobrança SDD" até "Recibos Seguintes"
       const primeiroBlock = scopeText.match(/1[ªa]\s*Recibo\s+Cobran[çc]a\s+SDD\s+((?:[\d.,]+\s*€\s*|-\s*){1,4})/i);
       let primeiro = null;
+      let multibancoPrimeiro = null;
       if (primeiroBlock) {
         const vals = Array.from(primeiroBlock[1].matchAll(/[\d]{1,3}(?:[.\s]\d{3})*,\d{2}\s*€/g)).map(m => m[0].trim());
-        primeiro = vals.length >= 2 ? vals[vals.length - 1] : (vals[0] || null); // último = SDD
+        multibancoPrimeiro = vals[0] || null;
+        primeiro = vals.at(-1) || null;
       }
 
       // Extrair todos os valores após "Recibos Seguintes Cobrança SDD"
       const seguintesBlock = scopeText.match(/Recibos?\s+Seguintes?\s+Cobran[çc]a\s+SDD\s+((?:[\d.,]+\s*€\s*|-\s*){1,4})/i);
       let seguintes = null;
+      let multibanco = null;
       if (seguintesBlock) {
         const vals = Array.from(seguintesBlock[1].matchAll(/[\d]{1,3}(?:[.\s]\d{3})*,\d{2}\s*€/g)).map(m => m[0].trim());
-        seguintes = vals.length >= 2 ? vals[vals.length - 1] : (vals[0] || null);
+        multibanco = vals[0] || null;
+        seguintes = vals.at(-1) || null;
       }
 
       // Fallback sem "Cobrança SDD" explícito
@@ -2648,10 +2672,14 @@ async function scrapeAccordionValues(page, metaState) {
         const seguintesSimple = scopeText.match(/Recibos?\s+Seguintes?[^€\d]{0,60}([\d]{1,3}(?:[.\s]\d{3})*,\d{2}\s*€)/i);
         seguintes = seguintesSimple?.[1]?.trim() || amounts[amounts.length - 1] || null;
         primeiro = seguintes;
+        multibanco = seguintes;
+        multibancoPrimeiro = primeiro;
       }
       if (!primeiro) primeiro = seguintes;
       if (!seguintes) seguintes = primeiro;
-      return { seguintes, primeiro };
+      if (!multibancoPrimeiro) multibancoPrimeiro = multibanco || primeiro;
+      if (!multibanco) multibanco = multibancoPrimeiro;
+      return { seguintes, primeiro, multibanco, multibancoPrimeiro };
     }
 
     const allEls = Array.from(document.querySelectorAll('*'));
@@ -2685,8 +2713,12 @@ async function scrapeAccordionValues(page, metaState) {
         const both = extractBothValues(clipped);
         if (both.seguintes || both.primeiro) {
           found[label.key] = both.seguintes || both.primeiro;
+          found[`${label.key}_multibanco`] = both.multibanco || both.multibancoPrimeiro;
           if (label.key !== 'anual' && both.primeiro && both.primeiro !== both.seguintes) {
             found[`${label.key}_primeiro`] = both.primeiro;
+          }
+          if (label.key !== 'anual' && both.multibancoPrimeiro && both.multibancoPrimeiro !== both.multibanco) {
+            found[`${label.key}_primeiro_multibanco`] = both.multibancoPrimeiro;
           }
           const ctxIdx = clipped.search(label.re);
           contexts[label.key] = (ctxIdx >= 0 ? clipped.slice(ctxIdx, ctxIdx + 200) : clipped.slice(0, 200)).trim();
@@ -2708,6 +2740,13 @@ async function scrapeAccordionValues(page, metaState) {
       trimestral_primeiro: domResult.found.trimestral_primeiro || null,
       semestral: domResult.found.semestral || null,
       semestral_primeiro: domResult.found.semestral_primeiro || null,
+      anual_multibanco: domResult.found.anual_multibanco || null,
+      mensal_multibanco: domResult.found.mensal_multibanco || null,
+      mensal_primeiro_multibanco: domResult.found.mensal_primeiro_multibanco || null,
+      trimestral_multibanco: domResult.found.trimestral_multibanco || null,
+      trimestral_primeiro_multibanco: domResult.found.trimestral_primeiro_multibanco || null,
+      semestral_multibanco: domResult.found.semestral_multibanco || null,
+      semestral_primeiro_multibanco: domResult.found.semestral_primeiro_multibanco || null,
     };
     metaState.accordionValuesContext = domResult.contexts;
     metaState.accordionRawText = null;
@@ -2718,7 +2757,16 @@ async function scrapeAccordionValues(page, metaState) {
 
   // Tentativa 3: body text completo
   const details = parseCoberturasReceiptDetails(bodyText);
-  metaState.accordionValues = { anual: details.anual || null, mensal: details.mensal || null, trimestral: details.trimestral || null, semestral: details.semestral || null };
+  metaState.accordionValues = {
+    anual: details.anual || null,
+    mensal: details.mensal || null,
+    trimestral: details.trimestral || null,
+    semestral: details.semestral || null,
+    anual_multibanco: details.anual_multibanco || null,
+    mensal_multibanco: details.mensal_multibanco || null,
+    trimestral_multibanco: details.trimestral_multibanco || null,
+    semestral_multibanco: details.semestral_multibanco || null,
+  };
   metaState.accordionRawText = details.rawText ? details.rawText.slice(0, 2000) : null;
 
   if (details.hasAny) {
@@ -2789,6 +2837,10 @@ async function enrichCoberturasReceiptDetails(page, metaState) {
     mensal: details.mensal || null,
     trimestral: details.trimestral || null,
     semestral: details.semestral || null,
+    anual_multibanco: details.anual_multibanco || null,
+    mensal_multibanco: details.mensal_multibanco || null,
+    trimestral_multibanco: details.trimestral_multibanco || null,
+    semestral_multibanco: details.semestral_multibanco || null,
   };
   metaState.coberturasReceiptDetailsContext = {
     anual: details.anualContext || null,

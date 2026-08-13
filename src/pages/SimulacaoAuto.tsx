@@ -78,11 +78,12 @@ export default function SimulacaoAuto() {
     sessionStorage.getItem('sim_auto_job_id')
   );
   const [simulationResult, setSimulationResult] = useState<{
-    accordionValues?: { anual?: string | null; semestral?: string | null; semestral_primeiro?: string | null; trimestral?: string | null; trimestral_primeiro?: string | null; mensal?: string | null; mensal_primeiro?: string | null } | null;
+    accordionValues?: { [key: string]: string | null | undefined; anual?: string | null; semestral?: string | null; semestral_primeiro?: string | null; trimestral?: string | null; trimestral_primeiro?: string | null; mensal?: string | null; mensal_primeiro?: string | null } | null;
     coberturasPremiumTotal?: string | null;
     status?: string;
   } | null>(null);
   const [selectedPeriodicity, setSelectedPeriodicity] = useState<'anual' | 'semestral' | 'trimestral' | 'mensal' | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'debito_direto' | 'multibanco'>('debito_direto');
   const [isSavingChoice, setIsSavingChoice] = useState(false);
   const [choiceSaved, setChoiceSaved] = useState(false);
   const transferTargetUrl = 'https://myzurich.zurich.com.pt/';
@@ -1004,13 +1005,34 @@ export default function SimulacaoAuto() {
                   <p className="text-base text-gray-800 text-center font-bold tracking-wide">
                     {base === 'en' ? 'Choose your preferred payment frequency:' : 'Escolha a periodicidade de pagamento:'}
                   </p>
+                  <div className="flex justify-center gap-2" role="group" aria-label={base === 'en' ? 'Payment method' : 'Forma de pagamento'}>
+                    {([
+                      { key: 'debito_direto', label: base === 'en' ? 'Direct debit' : 'Débito direto' },
+                      { key: 'multibanco', label: 'Multibanco' },
+                    ] as const).map(({ key, label }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => { setSelectedPaymentMethod(key); setChoiceSaved(false); }}
+                        className={`rounded-lg border px-4 py-2 text-sm font-semibold transition-colors ${selectedPaymentMethod === key ? 'border-blue-700 bg-blue-700 text-white' : 'border-blue-200 bg-white text-blue-800 hover:border-blue-500'}`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     {([
-                      { key: 'anual',      label: base === 'en' ? 'Annual'      : 'Anual',      icon: '📅', value: simulationResult.coberturasPremiumTotal ?? simulationResult.accordionValues?.['anual'],      primeiro: null },
-                      { key: 'semestral',  label: base === 'en' ? 'Semi-annual' : 'Semestral',  icon: '🗓️', value: simulationResult.accordionValues?.['semestral'],   primeiro: simulationResult.accordionValues?.['semestral_primeiro'] },
-                      { key: 'trimestral', label: base === 'en' ? 'Quarterly'   : 'Trimestral', icon: '📆', value: simulationResult.accordionValues?.['trimestral'],  primeiro: simulationResult.accordionValues?.['trimestral_primeiro'] },
-                      { key: 'mensal',     label: base === 'en' ? 'Monthly'     : 'Mensal',     icon: '💳', value: simulationResult.accordionValues?.['mensal'],       primeiro: simulationResult.accordionValues?.['mensal_primeiro'] },
-                    ] as const).map(({ key, label, icon, value, primeiro }) => {
+                      { key: 'anual',      label: base === 'en' ? 'Annual'      : 'Anual',      icon: '📅' },
+                      { key: 'semestral',  label: base === 'en' ? 'Semi-annual' : 'Semestral',  icon: '🗓️' },
+                      { key: 'trimestral', label: base === 'en' ? 'Quarterly'   : 'Trimestral', icon: '📆' },
+                      { key: 'mensal',     label: base === 'en' ? 'Monthly'     : 'Mensal',     icon: '💳' },
+                    ] as const).map(({ key, label, icon }) => {
+                      const paymentValues = simulationResult.accordionValues || {};
+                      const valueKey = selectedPaymentMethod === 'multibanco' ? `${key}_multibanco` : key;
+                      const value = paymentValues[valueKey]
+                        ?? (selectedPaymentMethod === 'debito_direto' && key === 'anual' ? simulationResult.coberturasPremiumTotal : undefined)
+                        ?? (selectedPaymentMethod === 'debito_direto' ? paymentValues[key] : undefined);
+                      const primeiro = paymentValues[`${key}${selectedPaymentMethod === 'multibanco' ? '_primeiro_multibanco' : '_primeiro'}`];
                       const isSelected = selectedPeriodicity === key;
                       const hasDualValue = primeiro && primeiro !== value;
                       return (
@@ -1070,11 +1092,12 @@ export default function SimulacaoAuto() {
                           setIsSavingChoice(true);
                           try {
                             const uid = auth.currentUser?.uid;
+                            const paymentValues = simulationResult.accordionValues || {};
                             const periodicityValues: Record<string, string | null | undefined> = {
-                              anual: simulationResult.coberturasPremiumTotal ?? simulationResult.accordionValues?.['anual'],
-                              semestral: simulationResult.accordionValues?.['semestral'],
-                              trimestral: simulationResult.accordionValues?.['trimestral'],
-                              mensal: simulationResult.accordionValues?.['mensal'],
+                              anual: paymentValues[selectedPaymentMethod === 'multibanco' ? 'anual_multibanco' : 'anual'] ?? (selectedPaymentMethod === 'debito_direto' ? simulationResult.coberturasPremiumTotal : undefined) ?? paymentValues.anual,
+                              semestral: paymentValues[selectedPaymentMethod === 'multibanco' ? 'semestral_multibanco' : 'semestral'],
+                              trimestral: paymentValues[selectedPaymentMethod === 'multibanco' ? 'trimestral_multibanco' : 'trimestral'],
+                              mensal: paymentValues[selectedPaymentMethod === 'multibanco' ? 'mensal_multibanco' : 'mensal'],
                             };
                             const chosenValue = periodicityValues[selectedPeriodicity!];
                             if (uid && transferJobId) {
@@ -1100,8 +1123,23 @@ export default function SimulacaoAuto() {
                                   coberturas: form.coberturas,
                                   outrosPedidos: form.outrosPedidos,
                                   periodicidadeEscolhida: selectedPeriodicity,
+                                  metodoPagamento: selectedPaymentMethod,
                                   premioEscolhido: chosenValue,
                                   todosPrecos: periodicityValues,
+                                  todosPrecosPorMetodo: {
+                                    debito_direto: {
+                                      anual: paymentValues.anual,
+                                      semestral: paymentValues.semestral,
+                                      trimestral: paymentValues.trimestral,
+                                      mensal: paymentValues.mensal,
+                                    },
+                                    multibanco: {
+                                      anual: paymentValues.anual_multibanco,
+                                      semestral: paymentValues.semestral_multibanco,
+                                      trimestral: paymentValues.trimestral_multibanco,
+                                      mensal: paymentValues.mensal_multibanco,
+                                    },
+                                  },
                                   transferJobId,
                                 },
                               }, { idempotencyKey: `${transferJobId}:choice:${selectedPeriodicity}` });
