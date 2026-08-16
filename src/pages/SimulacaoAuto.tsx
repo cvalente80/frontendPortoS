@@ -77,6 +77,9 @@ export default function SimulacaoAuto() {
   const [transferJobId, setTransferJobId] = useState<string | null>(() =>
     sessionStorage.getItem('sim_auto_job_id')
   );
+  const [sourceSimulationId, setSourceSimulationId] = useState<string | null>(() =>
+    sessionStorage.getItem('sim_auto_source_simulation_id')
+  );
   const [simulationResult, setSimulationResult] = useState<{
     accordionValues?: { [key: string]: string | null | undefined; anual?: string | null; semestral?: string | null; semestral_primeiro?: string | null; trimestral?: string | null; trimestral_primeiro?: string | null; mensal?: string | null; mensal_primeiro?: string | null } | null;
     coberturasPremiumTotal?: string | null;
@@ -96,6 +99,10 @@ export default function SimulacaoAuto() {
     if (transferJobId) sessionStorage.setItem('sim_auto_job_id', transferJobId);
     else sessionStorage.removeItem('sim_auto_job_id');
   }, [transferJobId]);
+  useEffect(() => {
+    if (sourceSimulationId) sessionStorage.setItem('sim_auto_source_simulation_id', sourceSimulationId);
+    else sessionStorage.removeItem('sim_auto_source_simulation_id');
+  }, [sourceSimulationId]);
 
   // Listener em tempo real ao job de transferência — actualiza simulationResult quando o Playwright terminar
   useEffect(() => {
@@ -406,6 +413,7 @@ export default function SimulacaoAuto() {
               outrosPedidos: form.outrosPedidos,
             }
           }, { idempotencyKey: key });
+          setSourceSimulationId(sourceSimulationId);
         } catch (e) {
           console.warn('[SimulacaoAuto] Falha a guardar simulação (ignorado):', e);
         }
@@ -1099,7 +1107,13 @@ export default function SimulacaoAuto() {
                               trimestral: paymentValues[selectedPaymentMethod === 'multibanco' ? 'trimestral_multibanco' : 'trimestral'],
                               mensal: paymentValues[selectedPaymentMethod === 'multibanco' ? 'mensal_multibanco' : 'mensal'],
                             };
-                            const chosenValue = periodicityValues[selectedPeriodicity!];
+                            const firstReceiptValues: Record<string, string | null | undefined> = {
+                              anual: paymentValues[selectedPaymentMethod === 'multibanco' ? 'anual_primeiro_multibanco' : 'anual_primeiro'] ?? periodicityValues.anual,
+                              semestral: paymentValues[selectedPaymentMethod === 'multibanco' ? 'semestral_primeiro_multibanco' : 'semestral_primeiro'],
+                              trimestral: paymentValues[selectedPaymentMethod === 'multibanco' ? 'trimestral_primeiro_multibanco' : 'trimestral_primeiro'],
+                              mensal: paymentValues[selectedPaymentMethod === 'multibanco' ? 'mensal_primeiro_multibanco' : 'mensal_primeiro'],
+                            };
+                            const chosenValue = firstReceiptValues[selectedPeriodicity!] ?? periodicityValues[selectedPeriodicity!];
                             if (uid && transferJobId) {
                               await saveSimulation(uid, {
                                 type: 'auto',
@@ -1125,10 +1139,25 @@ export default function SimulacaoAuto() {
                                   periodicidadeEscolhida: selectedPeriodicity,
                                   metodoPagamento: selectedPaymentMethod,
                                   premioEscolhido: chosenValue,
-                                  todosPrecos: periodicityValues,
+                                  todosPrecos: firstReceiptValues,
+                                  todosPrecosSeguintes: periodicityValues,
                                   todosPrecosPorMetodo: {
                                     debito_direto: {
-                                      anual: paymentValues.anual,
+                                      anual: paymentValues.anual_primeiro ?? paymentValues.anual ?? simulationResult.coberturasPremiumTotal,
+                                      semestral: paymentValues.semestral_primeiro,
+                                      trimestral: paymentValues.trimestral_primeiro,
+                                      mensal: paymentValues.mensal_primeiro,
+                                    },
+                                    multibanco: {
+                                      anual: paymentValues.anual_primeiro_multibanco ?? paymentValues.anual_multibanco,
+                                      semestral: paymentValues.semestral_primeiro_multibanco,
+                                      trimestral: paymentValues.trimestral_primeiro_multibanco,
+                                      mensal: paymentValues.mensal_primeiro_multibanco,
+                                    },
+                                  },
+                                  todosPrecosSeguintesPorMetodo: {
+                                    debito_direto: {
+                                      anual: paymentValues.anual ?? simulationResult.coberturasPremiumTotal,
                                       semestral: paymentValues.semestral,
                                       trimestral: paymentValues.trimestral,
                                       mensal: paymentValues.mensal,
@@ -1140,6 +1169,7 @@ export default function SimulacaoAuto() {
                                       mensal: paymentValues.mensal_multibanco,
                                     },
                                   },
+                                  sourceSimulationId: sourceSimulationId || undefined,
                                   transferJobId,
                                 },
                               }, { idempotencyKey: `${transferJobId}:choice:${selectedPeriodicity}` });
@@ -1147,12 +1177,14 @@ export default function SimulacaoAuto() {
                             setChoiceSaved(true);
                             sessionStorage.removeItem('sim_auto_step');
                             sessionStorage.removeItem('sim_auto_job_id');
+                            sessionStorage.removeItem('sim_auto_source_simulation_id');
                             navigate(`/${base}/minhas-simulacoes`);
                           } catch (e) {
                             console.warn('[SimulacaoAuto] Falha a guardar escolha (ignorado):', e);
                             setChoiceSaved(true);
                             sessionStorage.removeItem('sim_auto_step');
                             sessionStorage.removeItem('sim_auto_job_id');
+                            sessionStorage.removeItem('sim_auto_source_simulation_id');
                             navigate(`/${base}/minhas-simulacoes`);
                           } finally {
                             setIsSavingChoice(false);
