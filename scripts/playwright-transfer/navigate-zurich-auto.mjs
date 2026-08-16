@@ -2370,7 +2370,8 @@ function parseCoberturasReceiptDetails(panelText) {
       const amount = amounts.at(-1) || extractFirstAmount(nearbyText);
       if (amount) {
         values[label.key] = amount;
-        values[`${label.key}_multibanco`] = amounts[0] || amount;
+        const firstPaymentToken = nearbyText.match(/(?:-|\b\d{1,3}(?:[.\s]\d{3})*,\d{2}(?:\s*€)?)/);
+        values[`${label.key}_multibanco`] = firstPaymentToken?.[0]?.trim() === '-' ? null : (amounts[0] || amount);
         contexts[label.key] = nearbyText;
       }
     }
@@ -2385,7 +2386,8 @@ function parseCoberturasReceiptDetails(panelText) {
       const match = sectionText.match(pattern);
       if (match?.[1]) {
         values[label.key] = match[1].trim();
-        values[`${label.key}_multibanco`] = match[1].trim();
+        const beforeAmount = sectionText.slice(0, match.index + match[0].length - match[1].length);
+        values[`${label.key}_multibanco`] = /-\s*$/.test(beforeAmount) ? null : match[1].trim();
         contexts[label.key] = match[0].trim();
       }
     }
@@ -2647,14 +2649,17 @@ async function scrapeAccordionValues(page, metaState) {
       const amounts = Array.from(scopeText.matchAll(amountRe)).map(m => m[0].trim()).filter(a => !/^-\s*$/.test(a));
       if (!amounts.length) return { seguintes: null, primeiro: null, multibanco: null, multibancoPrimeiro: null };
 
+      const paymentTokens = (text) => Array.from(text.matchAll(/(?:[\d]{1,3}(?:[.\s]\d{3})*,\d{2}\s*€|-)/g)).map(m => m[0].trim());
+      const tokenValue = (token) => token === '-' ? null : token;
+
       // Extrair todos os valores após "1ª Recibo Cobrança SDD" até "Recibos Seguintes"
       const primeiroBlock = scopeText.match(/1[ªa]\s*Recibo\s+Cobran[çc]a\s+SDD\s+((?:[\d.,]+\s*€\s*|-\s*){1,4})/i);
       let primeiro = null;
       let multibancoPrimeiro = null;
       if (primeiroBlock) {
-        const vals = Array.from(primeiroBlock[1].matchAll(/[\d]{1,3}(?:[.\s]\d{3})*,\d{2}\s*€/g)).map(m => m[0].trim());
-        multibancoPrimeiro = vals[0] || null;
-        primeiro = vals.at(-1) || null;
+        const tokens = paymentTokens(primeiroBlock[1]);
+        multibancoPrimeiro = tokenValue(tokens[0]);
+        primeiro = tokenValue(tokens.at(-1));
       }
 
       // Extrair todos os valores após "Recibos Seguintes Cobrança SDD"
@@ -2662,9 +2667,9 @@ async function scrapeAccordionValues(page, metaState) {
       let seguintes = null;
       let multibanco = null;
       if (seguintesBlock) {
-        const vals = Array.from(seguintesBlock[1].matchAll(/[\d]{1,3}(?:[.\s]\d{3})*,\d{2}\s*€/g)).map(m => m[0].trim());
-        multibanco = vals[0] || null;
-        seguintes = vals.at(-1) || null;
+        const tokens = paymentTokens(seguintesBlock[1]);
+        multibanco = tokenValue(tokens[0]);
+        seguintes = tokenValue(tokens.at(-1));
       }
 
       // Fallback sem "Cobrança SDD" explícito
@@ -2672,13 +2677,17 @@ async function scrapeAccordionValues(page, metaState) {
         const seguintesSimple = scopeText.match(/Recibos?\s+Seguintes?[^€\d]{0,60}([\d]{1,3}(?:[.\s]\d{3})*,\d{2}\s*€)/i);
         seguintes = seguintesSimple?.[1]?.trim() || amounts[amounts.length - 1] || null;
         primeiro = seguintes;
-        multibanco = seguintes;
-        multibancoPrimeiro = primeiro;
+        const simplePrefix = seguintesSimple ? scopeText.slice(0, seguintesSimple.index + seguintesSimple[0].length - seguintesSimple[1].length) : '';
+        const hasMissingMultibanco = /-\s*$/.test(simplePrefix);
+        multibanco = hasMissingMultibanco ? null : seguintes;
+        multibancoPrimeiro = hasMissingMultibanco ? null : primeiro;
       }
       if (!primeiro) primeiro = seguintes;
       if (!seguintes) seguintes = primeiro;
-      if (!multibancoPrimeiro) multibancoPrimeiro = multibanco || primeiro;
-      if (!multibanco) multibanco = multibancoPrimeiro;
+      if (!primeiroBlock && !seguintesBlock) {
+        if (multibancoPrimeiro === undefined) multibancoPrimeiro = multibanco;
+        if (multibanco === undefined) multibanco = multibancoPrimeiro;
+      }
       return { seguintes, primeiro, multibanco, multibancoPrimeiro };
     }
 
