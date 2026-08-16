@@ -334,7 +334,7 @@ export default function MinhasSimulacoes(): React.ReactElement {
                 const typeOk = filter === 'all' || it.type === filter;
                 const hasPdf = Boolean((it as any)?.pdfUrl);
                 const policySubmitted = Boolean((it as any)?.policySubmitted);
-                const cotacaoConfirmada = Boolean((it as any)?.cotacaoConfirmada);
+                const cotacaoConfirmada = Boolean((it as any)?.cotacaoConfirmada || (it as any)?.payload?.cotacaoConfirmada);
                 const statusKey = !isAdmin && policySubmitted
                   ? 'simulacao_aprovada_por_si'
                   : hasPdf || cotacaoConfirmada
@@ -369,7 +369,7 @@ export default function MinhasSimulacoes(): React.ReactElement {
               };
               const hasPdf = Boolean((it as any)?.pdfUrl);
               const policySubmitted = Boolean((it as any)?.policySubmitted);
-              const cotacaoConfirmada = Boolean((it as any)?.cotacaoConfirmada);
+              const cotacaoConfirmada = Boolean((it as any)?.cotacaoConfirmada || (it as any)?.payload?.cotacaoConfirmada);
               const statusKey: keyof typeof STATUS_MAP = !isAdmin && policySubmitted
                 ? 'simulacao_aprovada_por_si'
                 : hasPdf || cotacaoConfirmada
@@ -416,6 +416,13 @@ export default function MinhasSimulacoes(): React.ReactElement {
                       const cob = Array.isArray(p.coberturas) ? p.coberturas.join(', ') : (p.coberturas || '');
                       const outros = (p.outrosPedidos || '').toString().trim() || '-';
                       const nif = p.contribuinte || p.nif || '-';
+                      const paymentMethod = p.metodoPagamento === 'multibanco' ? 'multibanco' : 'debito_direto';
+                      const methodPrices = p.todosPrecosPorMetodo?.[paymentMethod] as Record<string, string | null | undefined> | undefined;
+                      const displayedPrices = methodPrices && Object.keys(methodPrices).length > 0
+                        ? methodPrices
+                        : p.todosPrecos as Record<string, string | null | undefined> | undefined;
+                      const selectedPrice = displayedPrices?.[p.periodicidadeEscolhida] ?? p.premioEscolhido;
+                      const paymentMethodLabel = paymentMethod === 'multibanco' ? 'Multibanco' : 'Débito direto';
                       return (
                         <div className="text-sm text-blue-800 space-y-1">
                           <div className="font-semibold">{t('mysims:detail.simTitle')}</div>
@@ -434,10 +441,11 @@ export default function MinhasSimulacoes(): React.ReactElement {
                           {p.periodicidadeEscolhida && (
                             <div className="mt-3 pt-3 border-t border-blue-200">
                               <div className="font-semibold text-blue-700 mb-1">💶 {t('mysims:detail.quotedPrice', 'Cotação obtida')}</div>
-                              <div className="font-bold text-lg text-green-700">{p.premioEscolhido ?? '-'} <span className="text-sm font-normal text-blue-700">/ {p.periodicidadeEscolhida}</span></div>
-                              {p.todosPrecos && (
+                              <div className="text-sm text-blue-700">{paymentMethodLabel}</div>
+                              <div className="font-bold text-lg text-green-700">{selectedPrice ?? '-'} <span className="text-sm font-normal text-blue-700">/ {p.periodicidadeEscolhida}</span></div>
+                              {displayedPrices && (
                                 <div className="mt-1 grid grid-cols-2 gap-x-4 text-xs text-blue-600">
-                                  {Object.entries(p.todosPrecos as Record<string,string>).map(([k, v]) => v ? (
+                                  {Object.entries(displayedPrices).map(([k, v]) => v ? (
                                     <span key={k} className={p.periodicidadeEscolhida === k ? 'font-bold text-green-700' : ''}>{k}: {v}</span>
                                   ) : null)}
                                 </div>
