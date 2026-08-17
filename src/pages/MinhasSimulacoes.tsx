@@ -370,6 +370,23 @@ export default function MinhasSimulacoes(): React.ReactElement {
               const hasPdf = Boolean((it as any)?.pdfUrl);
               const policySubmitted = Boolean((it as any)?.policySubmitted);
               const cotacaoConfirmada = Boolean((it as any)?.cotacaoConfirmada || (it as any)?.payload?.cotacaoConfirmada);
+              const simulationPayload = (() => {
+                const rawPayload = (it as any)?.payload || {};
+                if (it.type !== 'auto' || !cotacaoConfirmada || rawPayload.periodicidadeEscolhida) return rawPayload;
+                const exactChoiceItem = choiceItems.find(
+                  d => (d as any)?.payload?.sourceSimulationId === it.id,
+                );
+                const plateChoices = plate
+                  ? choiceItems.filter(d => (d as any)?.payload?.matricula === plate)
+                  : [];
+                const choiceItem = exactChoiceItem || (plateChoices.length === 1 ? plateChoices[0] : undefined);
+                return choiceItem ? { ...rawPayload, ...(choiceItem as any).payload } : rawPayload;
+              })();
+              const lockedPaymentMethod = simulationPayload.metodoPagamento === 'multibanco'
+                ? 'multibanco'
+                : simulationPayload.metodoPagamento === 'debito_direto'
+                  ? 'debito_direto'
+                  : undefined;
               const statusKey: keyof typeof STATUS_MAP = !isAdmin && policySubmitted
                 ? 'simulacao_aprovada_por_si'
                 : hasPdf || cotacaoConfirmada
@@ -667,6 +684,7 @@ export default function MinhasSimulacoes(): React.ReactElement {
                                 addressStreet: (it as any)?.payload?.moradaTomador || (it as any)?.payload?.morada || undefined,
                                 addressPostalCode: (it as any)?.payload?.codigoPostalTomador || undefined,
                                 addressLocality: (it as any)?.payload?.localidadeTomador || undefined,
+                                ...(lockedPaymentMethod ? { paymentMethod: lockedPaymentMethod } : {}),
                               };
                               setPolicyInitialBySim((prev) => ({ ...prev, [it.id]: { ...data, ...prefill } }));
                               setOpenPolicyForSimId(it.id);
@@ -698,6 +716,7 @@ export default function MinhasSimulacoes(): React.ReactElement {
                               addressStreet: (it as any)?.payload?.moradaTomador || (it as any)?.payload?.morada || undefined,
                               addressPostalCode: (it as any)?.payload?.codigoPostalTomador || (it as any)?.payload?.codigoPostal || undefined,
                               addressLocality: (it as any)?.payload?.localidadeTomador || undefined,
+                                ...(lockedPaymentMethod ? { paymentMethod: lockedPaymentMethod } : {}),
                             };
                             setPolicyInitialBySim((prev) => ({ ...prev, [it.id]: { ...data, ...prefill } }));
                             setOpenPolicyForSimId(it.id);
@@ -717,6 +736,7 @@ export default function MinhasSimulacoes(): React.ReactElement {
                       uid={uid}
                       policyId={it.id}
                       initial={policyInitialBySim[it.id]}
+                      lockedPaymentMethod={lockedPaymentMethod}
                       submitLabel="Guardar e Avançar"
                       onSaved={async () => {
                         try {

@@ -7,13 +7,14 @@ export type PolicyFormProps = {
   uid: string;
   policyId: string;
   initial?: Partial<PolicyRecord> | null;
+  lockedPaymentMethod?: 'multibanco' | 'debito_direto';
   onSaved?: (data: Partial<PolicyRecord>) => void;
   submitLabel?: string;
 };
 
 const freqOptions: PaymentFrequency[] = ['anual', 'semestral', 'trimestral', 'mensal'];
 
-export default function PolicyForm({ uid, policyId, initial, onSaved, submitLabel }: PolicyFormProps): React.ReactElement {
+export default function PolicyForm({ uid, policyId, initial, lockedPaymentMethod, onSaved, submitLabel }: PolicyFormProps): React.ReactElement {
   const { t } = useTranslation(['policies', 'common']);
   const [holderName, setHolderName] = useState(initial?.holderName || '');
   const [nif, setNif] = useState(initial?.nif || '');
@@ -25,7 +26,7 @@ export default function PolicyForm({ uid, policyId, initial, onSaved, submitLabe
   const [phone, setPhone] = useState(initial?.phone || '');
   const [email, setEmail] = useState(initial?.email || '');
   const [paymentFrequency, setPaymentFrequency] = useState<PaymentFrequency>(initial?.paymentFrequency as PaymentFrequency || 'anual');
-  const [paymentMethod, setPaymentMethod] = useState<'multibanco' | 'debito_direto'>((initial?.paymentMethod as any) || 'multibanco');
+  const [paymentMethod, setPaymentMethod] = useState<'multibanco' | 'debito_direto'>(lockedPaymentMethod || (initial?.paymentMethod as any) || 'multibanco');
   const [nib, setNib] = useState(initial?.nib || '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -252,9 +253,11 @@ export default function PolicyForm({ uid, policyId, initial, onSaved, submitLabe
           <label htmlFor="pf-method" className="block text-left text-sm text-blue-800 mb-1">{t('policies:form.paymentMethod', 'Forma de pagamento')}</label>
           <select
             id="pf-method"
-            className="as-select border-blue-200"
+            className={`as-select border-blue-200 ${lockedPaymentMethod ? 'opacity-70 cursor-not-allowed' : ''}`}
             value={paymentMethod}
+            disabled={Boolean(lockedPaymentMethod)}
             onChange={(e) => {
+              if (lockedPaymentMethod) return;
               const val = e.target.value as 'multibanco' | 'debito_direto';
               setPaymentMethod(val);
               if (val === 'multibanco') {

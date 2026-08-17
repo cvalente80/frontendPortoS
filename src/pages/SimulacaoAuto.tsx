@@ -89,6 +89,7 @@ export default function SimulacaoAuto() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'debito_direto' | 'multibanco'>('debito_direto');
   const [isSavingChoice, setIsSavingChoice] = useState(false);
   const [choiceSaved, setChoiceSaved] = useState(false);
+  const [countdownSeconds, setCountdownSeconds] = useState(90);
   const transferTargetUrl = 'https://myzurich.zurich.com.pt/';
 
   // Persistir step e jobId em sessionStorage para sobreviver a recarregamentos
@@ -103,6 +104,15 @@ export default function SimulacaoAuto() {
     if (sourceSimulationId) sessionStorage.setItem('sim_auto_source_simulation_id', sourceSimulationId);
     else sessionStorage.removeItem('sim_auto_source_simulation_id');
   }, [sourceSimulationId]);
+
+  useEffect(() => {
+    if (step !== 4 || simulationResult) return;
+    setCountdownSeconds(90);
+    const intervalId = window.setInterval(() => {
+      setCountdownSeconds((seconds) => Math.max(0, seconds - 1));
+    }, 1000);
+    return () => window.clearInterval(intervalId);
+  }, [step, simulationResult]);
 
   // Listener em tempo real ao job de transferência — actualiza simulationResult quando o Playwright terminar
   useEffect(() => {
@@ -981,6 +991,12 @@ export default function SimulacaoAuto() {
                   <p className="text-sm text-gray-500 text-center">
                     {base === 'en' ? 'This may take a few minutes.' : 'Este processo pode demorar alguns minutos.'}
                   </p>
+                  <div className="flex items-center gap-2 text-blue-800" aria-live="polite" aria-label={base === 'en' ? 'Estimated waiting time' : 'Tempo de espera estimado'}>
+                    <span className="text-2xl" aria-hidden="true">⏱️</span>
+                    <span className="font-mono text-xl font-semibold tabular-nums">
+                      {String(Math.floor(countdownSeconds / 60)).padStart(2, '0')}:{String(countdownSeconds % 60).padStart(2, '0')}
+                    </span>
+                  </div>
                 </div>
               )}
               {/* Falhou */}

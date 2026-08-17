@@ -23,7 +23,7 @@ const debugOverlayEnabled = ['1', 'true', 'yes'].includes(String(process.env.TRA
 const sourcePreferenceRaw = String(process.env.TRANSFER_SOURCE_PREFERENCE || '').trim().toLowerCase();
 const preferLocalhostFirst = sourcePreferenceRaw === 'localhost' || sourcePreferenceRaw === 'local' || sourcePreferenceRaw === 'localhost-first';
 const headless = String(process.env.PW_HEADLESS || 'true').toLowerCase() !== 'false';
-const slowMo = Number(process.env.PW_SLOW_MO || (headless ? 0 : 220));
+const slowMo = Number(process.env.PW_SLOW_MO || 0);
 const manualMatriculaCapture = ['1', 'true', 'yes'].includes(String(process.env.TRANSFER_MANUAL_MATRICULA_LUPA_CAPTURE || '').trim().toLowerCase());
 const manualMatriculaAfterNif = ['1', 'true', 'yes'].includes(String(process.env.TRANSFER_MANUAL_MATRICULA_AFTER_NIF || '').trim().toLowerCase());
 const manualSelectVehicleFirst = ['1', 'true', 'yes'].includes(String(process.env.TRANSFER_MANUAL_SELECT_VEHICLE_FIRST || '').trim().toLowerCase());

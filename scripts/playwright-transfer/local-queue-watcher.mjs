@@ -83,7 +83,7 @@ const envHint = watcherMode === 'production' ? '.env.playwright.prod' : '.env.pl
 const credentialHealth = credentialHealthSummary();
 
 console.log(`[watcher] 🔥 Firebase projectId: ${firebaseConfig.projectId}`);
-console.log(`[watcher] 🌐 Modo: ${watcherMode} | headless: ${process.env.PW_HEADLESS ?? 'true'} | max-concurrent: ${MAX_CONCURRENT}`);
+console.log(`[watcher] 🌐 Modo: ${watcherMode} | headless dos jobs: false | slowMo dos jobs: 0 | max-concurrent: ${MAX_CONCURRENT}`);
 console.log(`[watcher] 🔐 Login Zurich -> required=${credentialHealth.loginRequired} user=${credentialHealth.usernameMasked} password=${credentialHealth.hasPassword ? `set(${credentialHealth.passwordLength})` : 'missing'} sourceHint=${envHint}`);
 if (credentialHealth.loginRequired && (!credentialHealth.hasUsername || !credentialHealth.hasPassword)) {
   console.warn('[watcher] ⚠️  Credenciais incompletas para login Zurich. Verifica TRANSFER_LOGIN_USERNAME/TRANSFER_LOGIN_PASSWORD no env-file ativo.');
@@ -130,7 +130,7 @@ async function claimAndLaunchJob(jobId) {
     TRANSFER_MATRICULA_LUPA_CLICKS: '2',
     TRANSFER_MATRICULA_FOCUS_CLICKS: '4',
     TRANSFER_MATRICULA_FOCUS_CLICK_GAP_MS: '50',
-    // Forçar headless=true e slowMo=0 — o watcher corre em background, nunca com UI
+    // Executar com browser visível para observar os tempos da simulação
     PW_HEADLESS: 'true',
     PW_SLOW_MO: '0',
   };
