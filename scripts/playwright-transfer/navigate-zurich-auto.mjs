@@ -805,6 +805,28 @@ async function loadLatestAutoSimulationPayload() {
   return null;
 }
 
+async function loadAutoSimulationPayloadForJob(jobId) {
+  const config = getFirebaseClientConfigFromEnv();
+  if (!config || !jobId) return null;
+
+  const app = getFirebaseClientApp(config);
+  if (!app) return null;
+
+  const db = getFirestore(app);
+  const jobSnapshot = await getDoc(doc(db, 'simulationTransferJobs', jobId));
+  if (!jobSnapshot.exists()) return null;
+
+  const data = jobSnapshot.data() || {};
+  if (data.simulationType && data.simulationType !== 'auto') return null;
+
+  return {
+    id: jobSnapshot.id,
+    path: jobSnapshot.ref.path,
+    payload: data.payload || {},
+    raw: data,
+  };
+}
+
 async function fillFirstMatchingField(page, selectors, value, fieldLabel, metaState) {
   if (value === undefined || value === null || String(value).trim() === '') return false;
   for (const selector of selectors) {
@@ -4268,15 +4290,24 @@ try {
     ? await loadSimulationPayloadFromFile(explicitSimulationPayloadFile).catch(() => null)
     : null;
 
-  const simulationSource = explicitSimulationSource || (preferLocalhostFirst
-    ? ((await loadLatestAutoSimulationFromLocalhost().catch(() => null)) ||
-      (await loadLatestAutoSimulationPayload().catch(() => null)))
-    : ((await loadLatestAutoSimulationPayload().catch(() => null)) ||
-      (await loadLatestAutoSimulationFromLocalhost().catch(() => null))));
+  const requestedJobId = String(process.env.TRANSFER_JOB_ID || '').trim();
+  const jobSimulationSource = requestedJobId
+    ? await loadAutoSimulationPayloadForJob(process.env.TRANSFER_JOB_ID).catch(() => null)
+    : null;
+  if (requestedJobId && !jobSimulationSource && !explicitSimulationSource) {
+    throw new Error(`Não foi possível carregar o payload do job ${requestedJobId}.`);
+  }
+  const simulationSource = explicitSimulationSource || jobSimulationSource || (preferLocalhostFirst
+      ? ((await loadLatestAutoSimulationFromLocalhost().catch(() => null)) ||
+        (await loadLatestAutoSimulationPayload().catch(() => null)))
+      : ((await loadLatestAutoSimulationPayload().catch(() => null)) ||
+        (await loadLatestAutoSimulationFromLocalhost().catch(() => null))));
   const simulationPayload = simulationSource?.payload || {};
   meta.simulationSourcePreference = explicitSimulationSource
     ? 'payload-file'
-    : (preferLocalhostFirst ? 'localhost-first' : 'firestore-first');
+    : jobSimulationSource
+      ? 'job-id'
+      : (preferLocalhostFirst ? 'localhost-first' : 'firestore-first');
   meta.simulationSourcePath = simulationSource?.path || null;
   meta.simulationPayloadSample = {
     matricula: simulationPayload.matricula || null,
@@ -4286,6 +4317,7 @@ try {
     ano: simulationPayload.ano || null,
     tipoSeguro: simulationPayload.tipoSeguro || null,
   };
+  console.log(`[transfer] Payload selecionado: ${meta.simulationSourcePath || 'não encontrado'} | marca=${simulationPayload.marca || '-'} | modelo=${simulationPayload.modelo || '-'} | matrícula=${simulationPayload.matricula || '-'}`);
 
   // Auto-detectar job ID a partir do simulationSource (path = 'simulationTransferJobs/{id}')
   // Permite que o script escreva resultados de volta ao Firestore sem TRANSFER_JOB_ID manual
