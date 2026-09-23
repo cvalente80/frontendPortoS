@@ -17,6 +17,7 @@ module.exports = {
       cwd: '/Users/carlosvalente/Desktop/frontendAS',
       env: {
         WATCHER_ENV: 'production',
+        PW_HEADLESS: 'true',
       },
       // Reiniciar automaticamente se o processo cair
       autorestart: true,

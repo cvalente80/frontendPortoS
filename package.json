@@ -55,11 +55,12 @@
     "pw:zurich:from-local:headed:manual-matricula": "TRANSFER_SOURCE_PREFERENCE=localhost TRANSFER_MATRICULA_LUPA_CLICKS=2 TRANSFER_MANUAL_MATRICULA_LUPA_CAPTURE=true PW_HEADLESS=false PW_SLOW_MO=20 node --env-file=.env.local --env-file=.env.playwright.local scripts/playwright-transfer/navigate-zurich-auto.mjs",
     "pw:zurich:from-local:headed:manual-after-nif": "TRANSFER_SOURCE_PREFERENCE=localhost TRANSFER_MATRICULA_LUPA_CLICKS=2 TRANSFER_MANUAL_MATRICULA_AFTER_NIF=true PW_HEADLESS=false PW_SLOW_MO=20 node --env-file=.env.local --env-file=.env.playwright.local scripts/playwright-transfer/navigate-zurich-auto.mjs",
     "pw:zurich:from-local:headed:manual-after-nif:debug": "TRANSFER_SOURCE_PREFERENCE=localhost TRANSFER_MATRICULA_LUPA_CLICKS=2 TRANSFER_MANUAL_MATRICULA_AFTER_NIF=true TRANSFER_DEBUG_OVERLAY=true PW_HEADLESS=false PW_SLOW_MO=20 node --env-file=.env.local --env-file=.env.playwright.local scripts/playwright-transfer/navigate-zurich-auto.mjs",
+    "pw:zurich:from-local:headed:debug-contribuinte": "TRANSFER_SOURCE_PREFERENCE=localhost TRANSFER_PAUSE_BEFORE_CONTRIBUINTE=true TRANSFER_DEBUG_OVERLAY=true PWDEBUG=1 PW_HEADLESS=false PW_SLOW_MO=20 node --env-file=.env.local --env-file=.env.playwright.local scripts/playwright-transfer/navigate-zurich-auto.mjs",
     "pw:validate:local-to-zurich": "node scripts/playwright-transfer/fill-local-auto-simulation.mjs && TRANSFER_SOURCE_PREFERENCE=localhost TRANSFER_MATRICULA_LUPA_CLICKS=2 node --env-file=.env.local --env-file=.env.playwright.local scripts/playwright-transfer/navigate-zurich-auto.mjs",
     "pw:validate:local-to-zurich:headed": "PW_HEADLESS=false PW_SLOW_MO=20 node scripts/playwright-transfer/fill-local-auto-simulation.mjs && TRANSFER_SOURCE_PREFERENCE=localhost TRANSFER_MATRICULA_LUPA_CLICKS=2 PW_HEADLESS=false PW_SLOW_MO=20 node --env-file=.env.local --env-file=.env.playwright.local scripts/playwright-transfer/navigate-zurich-auto.mjs",
     "pw:watcher": "node --env-file=.env.local --env-file=.env.playwright.local scripts/playwright-transfer/local-queue-watcher.mjs",
     "pw:watcher:headless": "PW_HEADLESS=true PW_SLOW_MO=0 node --env-file=.env.local --env-file=.env.playwright.local scripts/playwright-transfer/local-queue-watcher.mjs",
-    "pw:watcher:prod": "WATCHER_ENV=production node --env-file=.env.local --env-file=.env.playwright.prod scripts/playwright-transfer/local-queue-watcher.mjs",
+    "pw:watcher:prod": "WATCHER_ENV=production PW_HEADLESS=false node --env-file=.env.local --env-file=.env.playwright.prod scripts/playwright-transfer/local-queue-watcher.mjs",
     "pw:job:requeue": "node --env-file=.env.local scripts/playwright-transfer/requeue-job.mjs"
   },
   "dependencies": {

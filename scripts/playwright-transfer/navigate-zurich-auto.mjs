@@ -22,8 +22,12 @@ meta.steps.push = (...entries) => {
 const debugOverlayEnabled = ['1', 'true', 'yes'].includes(String(process.env.TRANSFER_DEBUG_OVERLAY || 'false').trim().toLowerCase());
 const sourcePreferenceRaw = String(process.env.TRANSFER_SOURCE_PREFERENCE || '').trim().toLowerCase();
 const preferLocalhostFirst = sourcePreferenceRaw === 'localhost' || sourcePreferenceRaw === 'local' || sourcePreferenceRaw === 'localhost-first';
+const productionWatcher = String(process.env.WATCHER_ENV || '').trim().toLowerCase() === 'production';
 const headless = String(process.env.PW_HEADLESS || 'true').toLowerCase() !== 'false';
 const slowMo = Number(process.env.PW_SLOW_MO || 0);
+const keepBrowserOpenMs = productionWatcher
+  ? Math.max(60000, Number.parseInt(String(process.env.TRANSFER_KEEP_BROWSER_OPEN_MS || '60000'), 10) || 60000)
+  : Math.max(0, Number.parseInt(String(process.env.TRANSFER_KEEP_BROWSER_OPEN_MS || '0'), 10) || 0);
 const manualMatriculaCapture = ['1', 'true', 'yes'].includes(String(process.env.TRANSFER_MANUAL_MATRICULA_LUPA_CAPTURE || '').trim().toLowerCase());
 const manualMatriculaAfterNif = ['1', 'true', 'yes'].includes(String(process.env.TRANSFER_MANUAL_MATRICULA_AFTER_NIF || '').trim().toLowerCase());
 const manualSelectVehicleFirst = ['1', 'true', 'yes'].includes(String(process.env.TRANSFER_MANUAL_SELECT_VEHICLE_FIRST || '').trim().toLowerCase());
@@ -92,6 +96,7 @@ const shouldScrapeAccordionBeforeCalcular = finalStepActions.includes('accordion
   || finalStepActions.includes('click-resumo-learned-coberturas-drag-accordion-calcular')
   || finalStepActions.includes('resumo-click-learned-coberturas-drag-accordion-calcular');
 const shouldPauseForGlassUncheck = ['1', 'true', 'yes'].includes(String(process.env.TRANSFER_PAUSE_FOR_GLASS_UNCHECK || '').trim().toLowerCase());
+const shouldPauseBeforePremium = ['1', 'true', 'yes'].includes(String(process.env.TRANSFER_PAUSE_BEFORE_PREMIUM || '').trim().toLowerCase());
 // Pausa simples após clicar Seguinte (passo 1→2) — sem captura de cliques; 0 = desativado
 const pauseAfterSeguinteMs = Math.max(0, Number.parseInt(String(process.env.TRANSFER_PAUSE_AFTER_SEGUINTE_MS || '0'), 10) || 0);
 const manualCoberturasReceiptClickCount = Math.max(1, Number.parseInt(String(process.env.TRANSFER_COBERTURAS_RECIBOS_MANUAL_CLICK_COUNT || '4'), 10) || 4);
@@ -99,9 +104,18 @@ const manualCoberturasReceiptClickTimeoutMs = Math.max(15000, Number.parseInt(St
 const accordionScrapeManualClickCount = Math.max(1, Number.parseInt(String(process.env.TRANSFER_ACCORDION_MANUAL_CLICK_COUNT || '4'), 10) || 4);
 const accordionScrapeManualClickTimeoutMs = Math.max(15000, Number.parseInt(String(process.env.TRANSFER_ACCORDION_MANUAL_CLICK_TIMEOUT_MS || '300000'), 10) || 300000);
 const accordionScrapeSettleMs = Math.max(400, Number.parseInt(String(process.env.TRANSFER_ACCORDION_SETTLE_MS || '1200'), 10) || 1200);
+const premiumManualCoberturasClickCount = Math.max(1, Number.parseInt(String(process.env.TRANSFER_PREMIUM_MANUAL_COBERTURAS_CLICK_COUNT || '3'), 10) || 3);
+const premiumManualCompletionSettleMs = Math.max(1000, Number.parseInt(String(process.env.TRANSFER_PREMIUM_MANUAL_COMPLETION_SETTLE_MS || '2500'), 10) || 2500);
+const ownDamagePremiumNextDelayMs = Math.max(0, Number.parseInt(String(process.env.TRANSFER_OWN_DAMAGE_PREMIUM_NEXT_DELAY_MS || '3000'), 10) || 3000);
+const ownDamageConsentWaitTimeoutMs = Math.max(5000, Number.parseInt(String(process.env.TRANSFER_OWN_DAMAGE_CONSENT_WAIT_MS || '30000'), 10) || 30000);
+const ownDamageConsentAfterWaitMs = Math.max(0, Number.parseInt(String(process.env.TRANSFER_OWN_DAMAGE_CONSENT_AFTER_WAIT_MS || '3000'), 10) || 3000);
+const ownDamageConfirmInspectWaitMs = Math.max(0, Number.parseInt(String(process.env.TRANSFER_OWN_DAMAGE_CONFIRM_INSPECT_WAIT_MS || '0'), 10) || 0);
+const ownDamageCoberturasSettlingMs = Math.max(0, Number.parseInt(String(process.env.TRANSFER_OWN_DAMAGE_COBERTURAS_SETTLE_MS || '3000'), 10) || 3000);
 const finalStepSettlingMs = Math.max(0, Number.parseInt(String(process.env.TRANSFER_FINAL_STEP_SETTLING_MS || '1200'), 10) || 1200);
 const finalStepBeforeSeguinteMs = Math.max(0, Number.parseInt(String(process.env.TRANSFER_FINAL_STEP_BEFORE_SEGUINTE_MS || '1800'), 10) || 1800);
 const finalStepNextPageWaitMs = Math.max(1500, Number.parseInt(String(process.env.TRANSFER_FINAL_STEP_NEXT_PAGE_WAIT_MS || '7000'), 10) || 7000);
+const zurichTomadorNameSelector = '#Zurich_PT_Theme_wtZurich_PT_Theme_Layout_SideBar_block_WebPatterns_wt24_block_wtColumn1_wtMainContent_wt20_wtItems_wt275_wtContent_Simuladores_WB_wt424_block_wt57_wtInput_wtinp_Tomador_Nome';
+const zurichClienteSeguinteSelector = '#Zurich_PT_Theme_wtZurich_PT_Theme_Layout_SideBar_block_WebPatterns_wt24_block_wtColumn1_wtMainContent_wt20_wtItems_wt275_wtActions_wtlnk_Seguinte_Cliente';
 const forcedMatriculaLupaSelector = String(process.env.TRANSFER_MATRICULA_LUPA_SELECTOR || '').trim();
 const defaultMatriculaLupaSelector = 'div.WSearch.T3:nth-of-type(1) > div.Text_Note.OSInline:nth-of-type(2) > span.fa.fa-fw';
 const effectiveMatriculaLupaSelector = forcedMatriculaLupaSelector || defaultMatriculaLupaSelector;
@@ -130,6 +144,7 @@ const contribuintePostFillWaitMs = Math.max(0, Number.parseInt(String(process.en
 const contribuintePostLookupWaitMs = Math.max(0, Number.parseInt(String(process.env.TRANSFER_CONTRIBUINTE_POST_LOOKUP_MS || '120'), 10) || 120);
 const contribuinteNameWaitTimeoutMs = Math.max(1200, Number.parseInt(String(process.env.TRANSFER_CONTRIBUINTE_NAME_WAIT_MS || '3500'), 10) || 3500);
 const contribuinteNamePollMs = Math.max(60, Number.parseInt(String(process.env.TRANSFER_CONTRIBUINTE_NAME_POLL_MS || '120'), 10) || 120);
+const codigoPostalTypeDelayMs = Math.max(80, Number.parseInt(String(process.env.TRANSFER_CODIGO_POSTAL_TYPE_DELAY_MS || '220'), 10) || 220);
 const simularPostClickReadyTimeoutMs = Math.max(1500, Number.parseInt(String(process.env.TRANSFER_SIMULAR_READY_TIMEOUT_MS || '10000'), 10) || 10000);
 const matriculaAutoDialogInitialWaitMs = Math.max(80, Number.parseInt(String(process.env.TRANSFER_MATRICULA_AUTO_DIALOG_WAIT_MS || '200'), 10) || 200);
 const loginStepTransitionMs = Math.max(0, Number.parseInt(String(process.env.TRANSFER_LOGIN_STEP_TRANSITION_MS || '500'), 10) || 500);
@@ -143,7 +158,7 @@ const vehiclePostSelectWaitMs = Math.max(0, Number.parseInt(String(process.env.T
 const vehicleLoadedWaitTimeoutMs = Math.max(1200, Number.parseInt(String(process.env.TRANSFER_VEHICLE_LOADED_WAIT_MS || '2500'), 10) || 2500);
 const vehicleLoadedSoftPauseMs = Math.max(0, Number.parseInt(String(process.env.TRANSFER_VEHICLE_LOADED_SOFT_PAUSE_MS || '350'), 10) || 350);
 const vehiclePostSelectLoadWaitMs = Math.max(200, Number.parseInt(String(process.env.TRANSFER_VEHICLE_POST_SELECT_LOAD_WAIT_MS || '900'), 10) || 900);
-const skipVehicleLoadedWait = ['1', 'true', 'yes'].includes(String(process.env.TRANSFER_SKIP_VEHICLE_LOADED_WAIT || 'true').trim().toLowerCase());
+const skipVehicleLoadedWait = ['1', 'true', 'yes'].includes(String(process.env.TRANSFER_SKIP_VEHICLE_LOADED_WAIT || 'false').trim().toLowerCase());
 const captureMatriculaIntermediateShot = ['1', 'true', 'yes'].includes(String(process.env.TRANSFER_CAPTURE_MATRICULA_SHOT || 'false').trim().toLowerCase());
 const loginLandingWaitTimeoutMs = Math.max(3000, Number.parseInt(String(process.env.TRANSFER_LOGIN_LANDING_WAIT_MS || '12000'), 10) || 12000);
 const menuSimuladoresReadyWaitMs = Math.max(600, Number.parseInt(String(process.env.TRANSFER_MENU_READY_WAIT_MS || '2500'), 10) || 2500);
@@ -169,6 +184,7 @@ const learnedResumoText = String(process.env.TRANSFER_RESUMO_LEARNED_TEXT || 'Pr
 // Seletor aprendido para o card "Opção Base" na página de seleção de planos (Terceiros)
 const learnedBaseCardSelector = String(process.env.TRANSFER_BASE_CARD_SELECTOR || '').trim();
 const learnedEssencialCardSelector = String(process.env.TRANSFER_ESSENCIAL_CARD_SELECTOR || '').trim();
+const premiumCardSelector = String(process.env.TRANSFER_PREMIUM_CARD_SELECTOR || '.cardTitle.Coluna4').trim();
 const manualCoberturasDragCount = Math.max(1, Number.parseInt(String(process.env.TRANSFER_COBERTURAS_MANUAL_DRAG_COUNT || '1'), 10) || 1);
 const manualCoberturasDragTimeoutMs = Math.max(15000, Number.parseInt(String(process.env.TRANSFER_COBERTURAS_MANUAL_DRAG_TIMEOUT_MS || '180000'), 10) || 180000);
 const learnedCoberturasHandleSelector = String(process.env.TRANSFER_COBERTURAS_DRAG_SELECTOR || 'div#Zurich_PT_Theme_wt146_block_WebPatterns_wt24_block_wtColumn1_wtMainContent_wtlr_Objectos_ctl00_wt407_wtItems_wt398_wtContent_wt416_wtLR_Descontos_ctl02_Zurich_PT_Patterns_wt12_block_wtSliderRange > span.ui-slider-handle.ui-state-default.ui-corner-all').trim();
@@ -844,6 +860,215 @@ async function fillFirstMatchingField(page, selectors, value, fieldLabel, metaSt
     }
   }
   return false;
+}
+
+async function fillPersonNameField(page, selectors, value, metaState) {
+  if (value === undefined || value === null || String(value).trim() === '') return false;
+  const expectedValue = String(value).trim();
+  metaState.steps.push('dados-pessoais-tomador -> iniciar preenchimento Nome');
+  console.log('[transfer] Dados do tomador: a iniciar preenchimento do Nome');
+  for (const selector of selectors) {
+    const locator = page.locator(selector).first();
+    if (!await locator.count().catch(() => 0)) continue;
+    if (!await locator.isVisible().catch(() => false)) continue;
+    try {
+      await locator.scrollIntoViewIfNeeded().catch(() => null);
+      await locator.click({ force: true, timeout: 5000 });
+      await locator.fill(expectedValue);
+      let actualValue = await locator.inputValue().catch(() => '');
+      if (!actualValue.trim()) {
+        await locator.selectText().catch(() => null);
+        await locator.pressSequentially(expectedValue, { delay: 40 });
+        await locator.blur().catch(() => null);
+        actualValue = await locator.inputValue().catch(() => '');
+      }
+      if (actualValue.trim() === expectedValue) {
+        metaState.steps.push(`prefill nome-tomador -> ${selector}`);
+        console.log(`[transfer] Dados do tomador: Nome preenchido (${selector})`);
+        return true;
+      }
+    } catch (error) {
+      metaState.steps.push(`prefill nome-tomador -> ${selector} error=${error?.message || String(error)}`);
+    }
+  }
+  metaState.steps.push('prefill nome-tomador -> not-found');
+  console.log('[transfer] Dados do tomador: não foi possível preencher o Nome');
+  return false;
+}
+
+async function fillPostalCodeDigitByDigit(page, selectors, value, fieldLabel, metaState) {
+  if (value === undefined || value === null || String(value).trim() === '') return false;
+  const rawValue = String(value).trim();
+  const digits = rawValue.replace(/\D/g, '');
+  if (!digits) return false;
+
+  for (const selector of selectors) {
+    const matched = page.locator(selector).first();
+    if (!await matched.count().catch(() => 0)) continue;
+    if (!await matched.isVisible().catch(() => false)) continue;
+    try {
+      const tagName = await matched.evaluate((element) => element.tagName.toLowerCase()).catch(() => '');
+      let locator = matched;
+      if (!['input', 'textarea'].includes(tagName)) {
+        locator = matched.locator('input, textarea').first();
+        if (!await locator.count().catch(() => 0)) locator = matched.locator('xpath=..').locator('input, textarea').first();
+      }
+      if (!await locator.count().catch(() => 0) || !await locator.isVisible().catch(() => false)) continue;
+      await locator.scrollIntoViewIfNeeded().catch(() => null);
+      await locator.click({ force: true });
+      await locator.selectText().catch(() => null);
+      await locator.press('Backspace').catch(() => null);
+      await locator.pressSequentially(rawValue, { delay: codigoPostalTypeDelayMs });
+      const actualValue = await locator.inputValue().catch(() => '');
+      if (actualValue.replace(/\D/g, '') !== digits) continue;
+      await page.locator('body').click({ position: { x: 12, y: 12 } }).catch(() => null);
+      await page.waitForTimeout(codigoPostalTypeDelayMs);
+      metaState.steps.push(`prefill ${fieldLabel} -> ${selector} (digits-only)`);
+      return true;
+    } catch {
+      continue;
+    }
+  }
+  metaState.steps.push(`prefill ${fieldLabel} -> not-found`);
+  return false;
+}
+
+async function fillFirstMatchingDateField(page, selectors, value, fieldLabel, metaState) {
+  if (value === undefined || value === null || String(value).trim() === '') {
+    metaState.steps.push(`prefill ${fieldLabel} -> missing-value`);
+    return false;
+  }
+  const rawValue = String(value).trim();
+  const dateValue = /^\d{4}-\d{2}-\d{2}$/.test(rawValue) ? rawValue : rawValue.replace(/^(\d{2})[-/]?(\d{2})[-/]?(\d{4})$/, '$3-$2-$1');
+  const displayValue = /^\d{4}-\d{2}-\d{2}$/.test(dateValue) ? `${dateValue.slice(8, 10)}-${dateValue.slice(5, 7)}-${dateValue.slice(0, 4)}` : rawValue;
+
+  for (const selector of selectors) {
+    const locator = page.locator(selector).first();
+    if (!await locator.count().catch(() => 0) || !await locator.isVisible().catch(() => false)) continue;
+    try {
+      const inputType = await locator.getAttribute('type').catch(() => null);
+      const inputMask = await locator.getAttribute('fv_type').catch(() => null);
+      await locator.fill(inputType === 'date' ? dateValue : displayValue);
+      const valueAfterFill = await locator.inputValue().catch(() => '');
+      const expectedDigits = displayValue.replace(/\D/g, '');
+      if (inputType === 'date' || valueAfterFill.replace(/\D/g, '') === expectedDigits || valueAfterFill === displayValue) {
+        metaState.steps.push(`prefill ${fieldLabel} -> ${selector}`);
+        return true;
+      }
+      await locator.click();
+      await locator.selectText().catch(() => null);
+      await locator.pressSequentially(displayValue, { delay: 50 });
+      await locator.blur().catch(() => null);
+      const valueAfterTyping = await locator.inputValue().catch(() => '');
+      if (valueAfterTyping.replace(/\D/g, '') === expectedDigits || valueAfterTyping === displayValue) {
+        metaState.steps.push(`prefill ${fieldLabel} -> ${selector} (${inputMask || 'date'} typing)`);
+        return true;
+      }
+    } catch {
+      continue;
+    }
+  }
+  metaState.steps.push(`prefill ${fieldLabel} -> not-found`);
+  return false;
+}
+
+async function selectFirstMatchingOption(page, selectors, value, fieldLabel, metaState) {
+  if (value === undefined || value === null || String(value).trim() === '') return false;
+  const wanted = String(value).trim().toLowerCase();
+  for (const selector of selectors) {
+    const locator = page.locator(selector).first();
+    if (!await locator.count().catch(() => 0) || !await locator.isVisible().catch(() => false)) continue;
+    const selected = await locator.evaluate((element, target) => {
+      const options = Array.from(element.options || []);
+      const option = options.find((candidate) => {
+        const text = (candidate.textContent || '').trim().toLowerCase();
+        const optionValue = String(candidate.value || '').trim().toLowerCase();
+        return optionValue === target || text === target || text.includes(target) || target.includes(text);
+      });
+      if (!option) return false;
+      element.value = option.value;
+      element.dispatchEvent(new Event('input', { bubbles: true }));
+      element.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    }, wanted).catch(() => false);
+    if (selected) {
+      metaState.steps.push(`prefill ${fieldLabel} -> ${selector}`);
+      return true;
+    }
+  }
+  metaState.steps.push(`prefill ${fieldLabel} -> not-found`);
+  return false;
+}
+
+async function selectCustomDropdownOption(page, selectors, value, fieldLabel, metaState) {
+  if (value === undefined || value === null || String(value).trim() === '') return false;
+  const wanted = String(value).trim().toLowerCase();
+  for (const selector of selectors) {
+    const trigger = page.locator(selector).first();
+    if (!await trigger.count().catch(() => 0) || !await trigger.isVisible().catch(() => false)) continue;
+    try {
+      await trigger.click();
+      const modal = page.locator('.form_select-modal.-show').last();
+      await modal.waitFor({ state: 'visible', timeout: 5000 });
+      const options = modal.locator('li.form_select-option');
+      const optionIndex = await options.evaluateAll((elements, target) => elements.findIndex((element) => {
+        const text = (element.querySelector('.txt')?.textContent || element.textContent || '').trim().toLowerCase();
+        return text === target || text.includes(target) || target.includes(text);
+      }), wanted);
+      if (optionIndex < 0) continue;
+      await options.nth(optionIndex).click();
+      const selectedText = await trigger.textContent().catch(() => '');
+      if (!String(selectedText || '').trim().toLowerCase().includes(wanted)) continue;
+      metaState.steps.push(`prefill ${fieldLabel} -> ${selector} -> ${wanted}`);
+      return true;
+    } catch {
+      continue;
+    }
+  }
+  metaState.steps.push(`prefill ${fieldLabel} -> not-found`);
+  return false;
+}
+
+async function fillMissingZurichPersonData(page, simulationPayload, metaState) {
+  const nameSelectors = [
+    zurichTomadorNameSelector,
+    'input[name*="nome" i]', 'input[id*="nome" i]', 'input[name*="name" i]', 'input[id*="name" i]',
+  ];
+  const birthDateSelectors = [
+    '#Zurich_PT_Theme_wtZurich_PT_Theme_Layout_SideBar_block_WebPatterns_wt24_block_wtColumn1_wtMainContent_wt20_wtItems_wt275_wtContent_wt301_wtInput_wtinp_TomadorSeguro_DataNascimento',
+    'input[name*="nascimento" i]', 'input[id*="nascimento" i]', 'input[name*="birth" i]', 'input[id*="birth" i]',
+  ];
+  const licenseDateSelectors = [
+    '#Zurich_PT_Theme_wtZurich_PT_Theme_Layout_SideBar_block_WebPatterns_wt24_block_wtColumn1_wtMainContent_wt20_wtItems_wt275_wtContent_wt206_wtInput_wtinp_TomadorSeguro_DataCartaConducao',
+    'input[name*="carta" i]', 'input[id*="carta" i]', 'input[name*="license" i]', 'input[id*="license" i]',
+  ];
+  const genderValue = simulationPayload.genero || simulationPayload.gender || simulationPayload.sexo;
+  const postalCodeValue = simulationPayload.codigoPostal || simulationPayload.postalCode;
+
+  if (!await fillPersonNameField(page, nameSelectors, simulationPayload.nome, metaState)) throw new Error('Não foi possível preencher o nome do tomador');
+  if (!await fillFirstMatchingDateField(page, birthDateSelectors, simulationPayload.dataNascimento || simulationPayload.birthDate, 'data-nascimento-tomador', metaState)) throw new Error('Não foi possível preencher a data de nascimento do tomador');
+  if (!await fillFirstMatchingDateField(page, licenseDateSelectors, simulationPayload.dataCartaConducao || simulationPayload.licenseDate, 'data-carta-tomador', metaState)) throw new Error('Não foi possível preencher a data da carta do tomador');
+  const genderFilled = await selectCustomDropdownOption(page, [
+    '#Zurich_PT_Theme_wtZurich_PT_Theme_Layout_SideBar_block_WebPatterns_wt24_block_wtColumn1_wtMainContent_wt20_wtItems_wt275_wtContent_wt661_wtInput > div.form_select-field.-myz_white.Mandatory',
+    '.form_select-field.-myz_white.Mandatory',
+  ], genderValue, 'genero-tomador', metaState) || await selectFirstMatchingOption(page, [
+    'select[name*="genero" i]', 'select[id*="genero" i]', 'select[name*="sexo" i]', 'select[id*="sexo" i]', 'select[name*="gender" i]', 'select[id*="gender" i]',
+  ], genderValue, 'genero-tomador', metaState);
+  if (!genderFilled) throw new Error('Não foi possível preencher o género do tomador');
+  if (!await fillPostalCodeDigitByDigit(page, [
+    '#Zurich_PT_Theme_wtZurich_PT_Theme_Layout_SideBar_block_WebPatterns_wt24_block_wtColumn1_wtMainContent_wt20_wtItems_wt275_wtContent_wt893_wtInput_wtinp_Cliente_CP',
+    'input[name*="postal" i]', 'input[id*="postal" i]', 'input[name*="codigo" i]', 'input[id*="codigo" i]', 'input[placeholder*="postal" i]',
+  ], postalCodeValue, 'codigo-postal-tomador', metaState)) throw new Error('Não foi possível preencher o código postal do tomador');
+
+  const seguinteCliente = page.locator(zurichClienteSeguinteSelector).first();
+  metaState.steps.push(`dados-pessoais-tomador -> clicar Seguinte após código postal (${zurichClienteSeguinteSelector})`);
+  try {
+    await seguinteCliente.click({ timeout: 3000 });
+    metaState.steps.push('dados-pessoais-tomador -> Seguinte após código postal clicado');
+  } catch (error) {
+    metaState.steps.push(`dados-pessoais-tomador -> Seguinte após código postal falhou: ${error?.message || String(error)}`);
+    throw new Error(`Não foi possível clicar em Seguinte após o código postal em 3 segundos: ${error?.message || String(error)}`);
+  }
 }
 
 async function forceFocusMatriculaField(page, selectors, metaState, stepLabel = 'matricula-focus', options = {}) {
@@ -3416,6 +3641,99 @@ async function captureSingleUserClickPassive(page, stepLabel, metaState, timeout
   return null;
 }
 
+async function captureSingleUserClickMatching(page, stepLabel, metaState, matches, timeoutMs = 120000) {
+  const predicateSource = matches.toString();
+  const payload = await page.evaluate(({ predicateSource: source, timeout }) => {
+    return new Promise((resolve) => {
+      const predicate = new Function(`return (${source});`)();
+      const cssPath = (element) => {
+        if (!element || !(element instanceof Element)) return '';
+        if (element.id) return `${element.tagName.toLowerCase()}#${element.id}`;
+        return element.tagName.toLowerCase() + (element.className ? `.${String(element.className).trim().replace(/\s+/g, '.')}` : '');
+      };
+      const cleanup = () => {
+        clearTimeout(timer);
+        document.removeEventListener('click', onClick, true);
+      };
+      const onClick = (event) => {
+        if (!event.isTrusted || event.button !== 0) return;
+        const target = event.target;
+        const click = {
+          x: event.clientX,
+          y: event.clientY,
+          tag: target?.tagName?.toLowerCase?.() || null,
+          id: target?.id || null,
+          className: typeof target?.className === 'string' ? target.className : null,
+          title: target?.getAttribute?.('title') || null,
+          ariaLabel: target?.getAttribute?.('aria-label') || null,
+          text: (target?.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 160),
+          selector: cssPath(target),
+          parentSelector: cssPath(target?.parentElement || null),
+          timestamp: Date.now(),
+        };
+        if (!predicate(click)) return;
+        cleanup();
+        resolve(click);
+      };
+      const timer = setTimeout(() => {
+        cleanup();
+        resolve(null);
+      }, timeout);
+      document.addEventListener('click', onClick, true);
+    });
+  }, { predicateSource, timeout: timeoutMs }).catch(() => null);
+
+  if (payload) {
+    metaState.steps.push(`${stepLabel} -> learned-click (${payload.selector || payload.tag || 'unknown'}) @${payload.x},${payload.y}`);
+    return payload;
+  }
+  metaState.steps.push(`${stepLabel} -> timeout-no-matching-click`);
+  return null;
+}
+
+async function captureSingleUserClickMatchingFrame(frame, matches, timeoutMs = 120000) {
+  const predicateSource = matches.toString();
+  return frame.evaluate(({ predicateSource: source, timeout }) => {
+    return new Promise((resolve) => {
+      const predicate = new Function(`return (${source});`)();
+      const cssPath = (element) => {
+        if (!element || !(element instanceof Element)) return '';
+        if (element.id) return `${element.tagName.toLowerCase()}#${element.id}`;
+        return element.tagName.toLowerCase() + (element.className ? `.${String(element.className).trim().replace(/\s+/g, '.')}` : '');
+      };
+      const cleanup = () => {
+        clearTimeout(timer);
+        document.removeEventListener('click', onClick, true);
+      };
+      const onClick = (event) => {
+        if (!event.isTrusted || event.button !== 0) return;
+        const target = event.target;
+        const click = {
+          x: event.clientX,
+          y: event.clientY,
+          tag: target?.tagName?.toLowerCase?.() || null,
+          id: target?.id || null,
+          className: typeof target?.className === 'string' ? target.className : null,
+          title: target?.getAttribute?.('title') || null,
+          ariaLabel: target?.getAttribute?.('aria-label') || null,
+          text: (target?.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 160),
+          selector: cssPath(target),
+          parentSelector: cssPath(target?.parentElement || null),
+          timestamp: Date.now(),
+        };
+        if (!predicate(click)) return;
+        cleanup();
+        resolve(click);
+      };
+      const timer = setTimeout(() => {
+        cleanup();
+        resolve(null);
+      }, timeout);
+      document.addEventListener('click', onClick, true);
+    });
+  }, { predicateSource, timeout: timeoutMs }).catch(() => null);
+}
+
 async function clickPreferredVehicleRow(targetPage, preferredIndex, metaState, stepLabel) {
   if (!Number.isInteger(preferredIndex) || preferredIndex < 0) return false;
 
@@ -3653,6 +3971,7 @@ async function selectFirstVehicleResult(page, metaState, knownPages = new Set())
 }
 
 const browser = await chromium.launch({ headless, slowMo });
+console.log(`[transfer] browser launch: headless=${headless} slowMo=${slowMo}`);
 const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
 
 async function loadLatestAutoSimulationFromLocalhost() {
@@ -3838,7 +4157,7 @@ async function clickPlanCardActionByText(page, textRegex, stepLabel, preferredVi
   const flags = textRegex.flags;
   const result = await page.evaluate(({ pattern, flags, preferredVisibleIndex }) => {
     const regex = new RegExp(pattern, flags);
-    const actionRegex = /Selecionar|Seleccionar|Escolher|Aderir|Continuar|Seguinte/i;
+    const actionRegex = /Selecionar|Seleccionar|Escolher|Aderir/i;
 
     const normalize = (value) => String(value || '').replace(/\s+/g, ' ').trim();
     const visible = (element) => {
@@ -3922,6 +4241,38 @@ async function clickPlanCardActionByText(page, textRegex, stepLabel, preferredVi
   return true;
 }
 
+async function clickPremiumCardAction(page, metaState) {
+  const result = await page.evaluate((selector) => {
+    const normalize = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+    const visible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+    };
+    const title = Array.from(document.querySelectorAll(selector)).find(visible);
+    if (!title) return { ok: false, reason: 'premium-title-not-found' };
+
+    let card = title;
+    for (let depth = 0; card && depth < 6; depth += 1, card = card.parentElement) {
+      const className = typeof card.className === 'string' ? card.className : '';
+      if (/\bcard\b/i.test(className)) break;
+    }
+    if (!card || !visible(card)) return { ok: false, reason: 'premium-card-not-found' };
+
+    const action = Array.from(card.querySelectorAll('a,button,input[type="submit"],input[type="button"],[role="button"]'))
+      .find((element) => visible(element) && /Selecionar|Seleccionar|Escolher|Aderir/i.test(normalize(element.textContent || element.getAttribute('value') || '')));
+    if (!action) return { ok: false, reason: 'premium-action-not-found', cardText: normalize(card.textContent).slice(0, 300) };
+
+    action.scrollIntoView({ block: 'center', inline: 'center' });
+    action.click();
+    return { ok: true, actionText: normalize(action.textContent || action.getAttribute('value') || '') };
+  }, premiumCardSelector).catch((error) => ({ ok: false, reason: error?.message || 'evaluate-failed' }));
+
+  metaState.steps.push(`final-step-select-opcao-premium-direct -> ${result.ok ? `success (${result.actionText})` : `failed (${result.reason})`}`);
+  return result.ok;
+}
+
 async function clickByTextFallback(textRegex, stepLabel) {
   const pattern = textRegex.source;
   const flags = textRegex.flags;
@@ -3948,7 +4299,7 @@ async function clickByTextFallback(textRegex, stepLabel) {
   return false;
 }
 
-async function clickFinalSeguinteStep(page, metaState) {
+async function clickFinalSeguinteStep(page, metaState, options = {}) {
   const beforeClickUrl = page.url();
 
   if (finalStepBeforeSeguinteMs > 0) {
@@ -3978,12 +4329,23 @@ async function clickFinalSeguinteStep(page, metaState) {
   await page.waitForLoadState('networkidle', { timeout: Math.max(3000, finalStepNextPageWaitMs) }).catch(() => null);
   await page.waitForTimeout(500);
   metaState.steps.push(`final-step-click-seguinte -> waited-next-page ${finalStepNextPageWaitMs}ms`);
+  if (options.expectedVisibleSelector) {
+    const expectedField = page.locator(options.expectedVisibleSelector).first();
+    const reachedExpectedScreen = await expectedField.waitFor({ state: 'visible', timeout: finalStepNextPageWaitMs }).then(() => true).catch(() => false);
+    if (!reachedExpectedScreen) {
+      metaState.steps.push(`final-step-click-seguinte -> transition-not-confirmed (${options.expectedVisibleSelector})`);
+      console.log(`[transfer] Seguinte não confirmou o ecrã esperado: ${options.expectedVisibleSelector}`);
+      return false;
+    }
+    metaState.steps.push(`final-step-click-seguinte -> transition-confirmed (${options.expectedVisibleSelector})`);
+  }
   metaState.steps.push('final-step-click-seguinte -> success');
   return true;
 }
 
-async function clickLowerSeguinteStep(page, metaState) {
+async function clickLowerSeguinteStep(page, metaState, options = {}) {
   const beforeClickUrl = page.url();
+  const waitForNavigation = options.waitForNavigation !== false;
 
   if (finalStepBeforeSeguinteMs > 0) {
     await page.waitForTimeout(finalStepBeforeSeguinteMs);
@@ -4002,6 +4364,12 @@ async function clickLowerSeguinteStep(page, metaState) {
   if (!clicked) {
     metaState.steps.push('final-step-click-lower-seguinte -> not-found');
     return false;
+  }
+
+  if (!waitForNavigation) {
+    metaState.steps.push('final-step-click-lower-seguinte -> pode clicar no Confirmar');
+    console.log('[transfer] 👆 Seguinte foi clicado; podes clicar no Confirmar. O Playwright vai tentar agora no modal.');
+    return true;
   }
 
   await page.waitForURL((url) => url.toString() !== beforeClickUrl, { timeout: finalStepNextPageWaitMs }).catch(() => null);
@@ -4046,6 +4414,7 @@ function isOwnDamageAutoSimulation(simulationPayload) {
 
 async function selectNamedOptionStep(page, metaState, optionRegex, stepLabel, options = {}) {
   const learnedSelector = String(options.learnedSelector || '').trim();
+  const cardSelector = String(options.cardSelector || '').trim();
   await page.waitForLoadState('domcontentloaded', { timeout: Math.max(2500, finalStepNextPageWaitMs) }).catch(() => null);
   await page.waitForLoadState('networkidle', { timeout: Math.max(3000, finalStepNextPageWaitMs) }).catch(() => null);
   await page.waitForTimeout(250);
@@ -4057,6 +4426,16 @@ async function selectNamedOptionStep(page, metaState, optionRegex, stepLabel, op
       metaState.steps.push(`${stepLabel} -> success`);
       return true;
     }
+  }
+
+  if (cardSelector) {
+    const cardClicked = await clickForcedSelector(page, cardSelector, `${stepLabel}-card-selector`, metaState);
+    if (cardClicked) {
+      await page.waitForTimeout(250);
+      metaState.steps.push(`${stepLabel} -> success`);
+      return true;
+    }
+    metaState.steps.push(`${stepLabel}-card-selector -> not-found (${cardSelector})`);
   }
 
   const planActionClicked = await clickPlanCardActionByText(page, optionRegex, `${stepLabel}-plan-card`, 0);
@@ -4119,7 +4498,218 @@ async function selectOpcaoEssencialStep(page, metaState) {
 
 async function selectOpcaoPremiumStep(page, metaState) {
   const premiumRegex = /Opção\s*Premium|Opcao\s*Premium|Premium/i;
-  return selectNamedOptionStep(page, metaState, premiumRegex, 'final-step-select-opcao-premium');
+  const directActionClicked = await clickPremiumCardAction(page, metaState);
+  if (directActionClicked) {
+    return true;
+  }
+  const actionClicked = await clickPlanCardActionByText(page, premiumRegex, 'final-step-select-opcao-premium-plan-card', 0);
+  if (actionClicked) return true;
+  return selectNamedOptionStep(page, metaState, premiumRegex, 'final-step-select-opcao-premium', { cardSelector: premiumCardSelector });
+}
+
+async function capturePremiumDiagnostic(page, metaState, label) {
+  const safeLabel = String(label).replace(/[^a-z0-9_-]+/gi, '-').replace(/^-+|-+$/g, '').toLowerCase();
+  const screenshot = path.join(dir, `premium-${safeLabel}.png`);
+  await page.screenshot({ path: screenshot, fullPage: false }).catch(() => null);
+  const state = await page.evaluate(() => {
+    const visible = (element) => {
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+    };
+    const controls = Array.from(document.querySelectorAll('a,button,input,select,[role="button"],[role="radio"],[role="checkbox"]'))
+      .filter(visible)
+      .map((element) => ({
+        tag: element.tagName.toLowerCase(),
+        type: element.getAttribute('type'),
+        value: element.getAttribute('value'),
+        text: (element.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 160),
+        id: element.id || null,
+        className: typeof element.className === 'string' ? element.className : null,
+        href: element.getAttribute('href'),
+      }))
+      .filter((control) => /premium|selecion|select|escolher|seguinte|cobertura|resumo/i.test(`${control.text} ${control.value} ${control.id} ${control.className}`));
+    return {
+      url: window.location.href,
+      title: document.title,
+      bodyText: (document.body?.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 3000),
+      controls,
+    };
+  }).catch(() => ({ url: page.url(), title: '', bodyText: '', controls: [] }));
+  const diagnostic = { label: safeLabel, screenshot, ...state, timestamp: new Date().toISOString() };
+  metaState.premiumDiagnostics = [...(metaState.premiumDiagnostics || []), diagnostic];
+  metaState.steps.push(`premium-diagnostic -> ${safeLabel} | url=${diagnostic.url} | controls=${diagnostic.controls.length} | screenshot=${screenshot}`);
+  console.log(`[transfer] 🔎 Premium diagnostic ${safeLabel}: url=${diagnostic.url}`);
+  console.log(`[transfer]    Screenshot: ${screenshot}`);
+  console.log(`[transfer]    Opções clicáveis relevantes: ${diagnostic.controls.map((control) => `${control.tag}:${control.text || control.value || control.id || '-'}`).join(' | ') || 'nenhuma'}`);
+  return diagnostic;
+}
+
+async function startPremiumManualRecorder(page, metaState) {
+  const bindingName = `recordPremiumClick_${Date.now()}`;
+  metaState.premiumRecordedClicks = [];
+  metaState.premiumRecordedUrls = [{ url: page.url(), timestamp: new Date().toISOString() }];
+  await page.exposeBinding(bindingName, async ({ page: sourcePage }, payload) => {
+    if (!payload || !sourcePage) return;
+    const index = metaState.premiumRecordedClicks.length + 1;
+    const screenshot = path.join(dir, `premium-manual-click-${String(index).padStart(2, '0')}.png`);
+    const click = { ...payload, index, url: sourcePage.url(), screenshot, timestamp: new Date().toISOString() };
+    metaState.premiumRecordedClicks.push(click);
+    await sourcePage.screenshot({ path: screenshot, fullPage: false }).catch(() => null);
+    metaState.steps.push(`premium-manual-recording -> click ${index} ${click.selector || click.tag || 'unknown'} @${click.x},${click.y} | url=${click.url} | screenshot=${screenshot}`);
+    console.log(`[transfer] 🖱️ Clique manual #${index}: ${click.selector || click.tag || 'unknown'} @${click.x},${click.y}`);
+    console.log(`[transfer]    URL=${click.url} | screenshot=${screenshot}`);
+  });
+  await page.addInitScript((name) => {
+    const install = () => {
+      if (window.__premiumManualRecorder) return;
+      const cssPath = (element) => {
+        if (!element || !(element instanceof Element)) return '';
+        const parts = [];
+        let current = element;
+        while (current && current.nodeType === Node.ELEMENT_NODE && parts.length < 10) {
+          let part = current.nodeName.toLowerCase();
+          if (current.id) {
+            part += `#${current.id}`;
+            parts.unshift(part);
+            break;
+          }
+          if (current.classList?.length) part += `.${Array.from(current.classList).slice(0, 3).join('.')}`;
+          parts.unshift(part);
+          current = current.parentElement;
+        }
+        return parts.join(' > ');
+      };
+      const listener = (event) => {
+        if (!event.isTrusted || event.button !== 0) return;
+        const target = event.target;
+        window[name]({
+          x: event.clientX,
+          y: event.clientY,
+          tag: target?.tagName?.toLowerCase?.() || null,
+          id: target?.id || null,
+          className: typeof target?.className === 'string' ? target.className : null,
+          value: target?.getAttribute?.('value') || null,
+          text: (target?.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 200),
+          selector: cssPath(target),
+        });
+      };
+      document.addEventListener('click', listener, true);
+      window.__premiumManualRecorder = { listener };
+    };
+    install();
+  }, bindingName);
+  page.on('framenavigated', (frame) => {
+    if (frame !== page.mainFrame()) return;
+    const entry = { url: frame.url(), timestamp: new Date().toISOString() };
+    metaState.premiumRecordedUrls.push(entry);
+    metaState.steps.push(`premium-manual-recording -> navigation ${entry.url}`);
+    console.log(`[transfer] 🌐 Navegação manual: ${entry.url}`);
+  });
+  await page.evaluate((name) => {
+    const cssPath = (element) => {
+      if (!element || !(element instanceof Element)) return '';
+      const parts = [];
+      let current = element;
+      while (current && current.nodeType === Node.ELEMENT_NODE && parts.length < 10) {
+        let part = current.nodeName.toLowerCase();
+        if (current.id) {
+          part += `#${current.id}`;
+          parts.unshift(part);
+          break;
+        }
+        if (current.classList?.length) part += `.${Array.from(current.classList).slice(0, 3).join('.')}`;
+        parts.unshift(part);
+        current = current.parentElement;
+      }
+      return parts.join(' > ');
+    };
+    const listener = (event) => {
+      if (!event.isTrusted || event.button !== 0) return;
+      const target = event.target;
+      window[name]({
+        x: event.clientX,
+        y: event.clientY,
+        tag: target?.tagName?.toLowerCase?.() || null,
+        id: target?.id || null,
+        className: typeof target?.className === 'string' ? target.className : null,
+        value: target?.getAttribute?.('value') || null,
+        text: (target?.textContent || '').replace(/\s+/g, ' ').trim().slice(0, 200),
+        selector: cssPath(target),
+      });
+    };
+    document.addEventListener('click', listener, true);
+  }, bindingName);
+  metaState.steps.push('premium-manual-recording -> started');
+  console.log('[transfer] ⏺️ GRAVAÇÃO iniciada: faz todos os cliques até ao prémio final.');
+}
+
+async function waitForPremiumManualCompletion(page, metaState) {
+  const started = Date.now();
+  let coberturasEnteredAt = null;
+  let clicksAtCoberturasEntry = 0;
+  let lastClickCount = metaState.premiumRecordedClicks.length;
+  let lastClickAt = Date.now();
+  while (Date.now() - started < 600000) {
+    const onCoberturas = /\/MZ_Auto\/Coberturas\.aspx\?q=/i.test(page.url());
+    if (onCoberturas && !coberturasEnteredAt) {
+      coberturasEnteredAt = Date.now();
+      clicksAtCoberturasEntry = metaState.premiumRecordedClicks.length;
+      metaState.premiumManualCoberturasEnteredAt = new Date().toISOString();
+      metaState.steps.push(`premium-manual-recording -> entered-coberturas | clicks=${clicksAtCoberturasEntry}`);
+      console.log(`[transfer] 🧭 Chegou a Coberturas; continua a gravação até ${premiumManualCoberturasClickCount} clique(s) nesta página.`);
+    }
+    if (metaState.premiumRecordedClicks.length !== lastClickCount) {
+      lastClickCount = metaState.premiumRecordedClicks.length;
+      lastClickAt = Date.now();
+    }
+    const postCoberturasClicks = metaState.premiumRecordedClicks.length - clicksAtCoberturasEntry;
+    const hasPremiumTotal = await page.evaluate(() => /Pr[eé]mio Total|Premio Total/i.test(document.body?.innerText || '')).catch(() => false);
+    const completed = Boolean(
+      coberturasEnteredAt
+      && hasPremiumTotal
+      && postCoberturasClicks >= premiumManualCoberturasClickCount
+      && Date.now() - lastClickAt >= premiumManualCompletionSettleMs
+    );
+    if (completed) {
+      metaState.premiumManualFlowCompletedAt = new Date().toISOString();
+      metaState.steps.push(`premium-manual-recording -> completed | clicks=${metaState.premiumRecordedClicks.length} | coberturasClicks=${postCoberturasClicks} | url=${page.url()}`);
+      console.log(`[transfer] ✅ GRAVAÇÃO terminada: ${metaState.premiumRecordedClicks.length} clique(s).`);
+      return true;
+    }
+    await page.waitForTimeout(500);
+  }
+  metaState.steps.push(`premium-manual-recording -> timeout | clicks=${metaState.premiumRecordedClicks.length}`);
+  return false;
+}
+
+async function pauseBeforePremiumCardStep(page, metaState) {
+  const pauseShot = path.join(dir, '99-premium-card-before-click.png');
+  await page.screenshot({ path: pauseShot, fullPage: false }).catch(() => null);
+  metaState.premiumCardPauseScreenshot = pauseShot;
+  metaState.steps.push(`premium-card-pause -> screenshot: ${pauseShot}`);
+  await updateDebugOverlay(page, 'PAUSADO: clica no tile Opção Premium para Danos Próprios');
+  console.log(`[transfer] 🖼️  Print antes da seleção Premium: ${pauseShot}`);
+  console.log(`[transfer] ⏸  PAUSADO antes da seleção Premium (${premiumCardSelector}).`);
+  console.log('[transfer]    👆 Clica no tile Opção Premium. O clique será guardado como a seleção válida.');
+  await capturePremiumDiagnostic(page, metaState, 'before-manual-click');
+  const payload = await captureSingleUserClickPassive(page, 'premium-card-manual-click', metaState, 300000);
+  if (!payload) {
+    metaState.steps.push('premium-card-pause -> timeout-no-click');
+    console.log('[transfer] ⚠️  Timeout — não foi registado clique no tile Premium.');
+    return false;
+  }
+
+  metaState.learnedPremiumCardSelector = payload.selector || null;
+  metaState.learnedPremiumCardClick = payload;
+  metaState.premiumCardSelection = 'manual-click';
+  metaState.steps.push(`premium-card-pause -> clique registado: ${payload.selector || 'unknown'} @${payload.x},${payload.y}`);
+  console.log(`[transfer] ✅ Opção Premium guardada como válida: ${payload.selector || 'unknown'} @${payload.x},${payload.y}`);
+  await capturePremiumDiagnostic(page, metaState, 'after-manual-click');
+  console.log(`[transfer] ⏭️  A preparar ação Premium; URL atual: ${page.url()}`);
+  await startPremiumManualRecorder(page, metaState);
+  await waitForPremiumManualCompletion(page, metaState);
+  return true;
 }
 
 async function waitForCoberturasPage(page, metaState) {
@@ -4170,6 +4760,124 @@ async function clickCoberturasStepNavigation(page, metaState) {
   await page.waitForTimeout(400);
   metaState.steps.push('final-step-click-coberturas-nav -> success');
   return true;
+}
+
+async function waitForOwnDamageConfirmClick(page, metaState) {
+  const confirmMatches = (click) => /confirmar/i.test(`${click.text} ${click.id} ${click.title} ${click.ariaLabel}`);
+  const startedAt = Date.now();
+  const listeners = new Map();
+  const knownFrames = new Set();
+  let screenshotSaved = false;
+  let confirmContext = null;
+
+  const getContexts = () => page.context().pages().flatMap((candidatePage) => candidatePage.frames().map((frame) => ({ candidatePage, frame })));
+  const installListener = ({ candidatePage, frame }) => {
+    if (knownFrames.has(frame)) return;
+    knownFrames.add(frame);
+    listeners.set(frame, captureSingleUserClickMatchingFrame(frame, confirmMatches, ownDamageConsentWaitTimeoutMs)
+      .then((payload) => payload ? { payload, candidatePage, frame } : null)
+      .catch(() => null));
+  };
+
+  while (Date.now() - startedAt < ownDamageConsentWaitTimeoutMs) {
+    const contexts = getContexts();
+    contexts.forEach(installListener);
+    for (const context of contexts) {
+      const confirmLocator = context.frame.locator('a,button,input[type="button"],input[type="submit"]')
+        .filter({ hasText: /^\s*Confirmar\s*$/i }).first();
+      if (!await confirmLocator.isVisible().catch(() => false)) continue;
+      confirmContext = context;
+      if (!screenshotSaved) {
+        const screenshot = path.join(dir, 'danos-proprios-confirmar-before-click.png');
+        await context.candidatePage.screenshot({ path: screenshot, fullPage: false }).catch(() => null);
+        metaState.ownDamageConfirmScreenshot = screenshot;
+        metaState.steps.push(`own-damage-confirm -> visible | screenshot=${screenshot}`);
+        console.log(`[transfer] 🖼️  Janela Confirmar encontrada: ${screenshot}`);
+        console.log(`[transfer]    página=${context.candidatePage.url()} | frame=${context.frame.url() || 'about:blank'}`);
+        console.log('[transfer] ⏸  A aguardar o teu clique manual em Confirmar.');
+        screenshotSaved = true;
+      }
+      break;
+    }
+
+    const completed = await Promise.race(Array.from(listeners.values())).catch(() => null);
+    if (completed) {
+      const { payload, candidatePage, frame } = completed;
+      payload.pageUrl = candidatePage.url();
+      payload.frameUrl = frame.url();
+      payload.context = candidatePage === page ? 'main-page' : 'popup-page';
+      confirmContext = { candidatePage, frame };
+      if (!screenshotSaved) {
+        const screenshot = path.join(dir, 'danos-proprios-confirmar-before-click.png');
+        await candidatePage.screenshot({ path: screenshot, fullPage: false }).catch(() => null);
+        metaState.ownDamageConfirmScreenshot = screenshot;
+        screenshotSaved = true;
+      }
+      metaState.ownDamageConfirmClick = payload;
+      metaState.learnedOwnDamageConfirmSelector = payload.selector || null;
+      metaState.ownDamageConfirmPageUrl = payload.pageUrl;
+      metaState.ownDamageConfirmFrameUrl = payload.frameUrl;
+      metaState.steps.push(`own-damage-confirm -> manual-click-saved (${payload.selector || payload.tag || 'unknown'}) page=${payload.pageUrl} frame=${payload.frameUrl || 'about:blank'}`);
+      console.log(`[transfer] ✅ Clique Confirmar guardado: ${payload.selector || payload.tag || 'unknown'}`);
+      return true;
+    }
+    await page.waitForTimeout(250);
+  }
+
+  metaState.steps.push(confirmContext
+    ? 'own-damage-confirm -> visible-but-click-not-captured'
+    : 'own-damage-confirm -> not-found');
+  return false;
+}
+
+async function clickOwnDamageConfirmAutomatically(page, metaState) {
+  const startedAt = Date.now();
+  const timeoutMs = Math.min(5000, ownDamageConsentWaitTimeoutMs);
+  const confirmSelector = '#WebPatterns_wt14_block_wtMainContent_WebPatterns_wt7_block_wtColumn2_wtlnk_gerar';
+  while (Date.now() - startedAt < timeoutMs) {
+    for (const candidatePage of page.context().pages()) {
+      for (const frame of candidatePage.frames()) {
+        const confirm = frame.locator(confirmSelector).first().or(
+          frame.locator('a,button,input[type="button"],input[type="submit"]')
+            .filter({ hasText: /^\s*Confirmar\s*$/i }).first()
+        ).first();
+        if (!await confirm.isVisible().catch(() => false)) continue;
+        const selector = await confirm.evaluate((element) => {
+          if (element.id) return `${element.tagName.toLowerCase()}#${element.id}`;
+          return element.tagName.toLowerCase() + (element.className ? `.${String(element.className).trim().replace(/\s+/g, '.')}` : '');
+        }).catch(() => null);
+        const screenshot = path.join(dir, 'danos-proprios-confirmar-before-click.png');
+        await candidatePage.screenshot({ path: screenshot, fullPage: false }).catch(() => null);
+        metaState.ownDamageConfirmScreenshot = screenshot;
+        metaState.ownDamageConfirmPageUrl = candidatePage.url();
+        metaState.ownDamageConfirmFrameUrl = frame.url();
+        metaState.learnedOwnDamageConfirmSelector = selector;
+        metaState.steps.push(`own-damage-confirm -> modal-detected | selector=${selector || confirmSelector}`);
+        console.log('[transfer] ✅ Modal Confirmar detetado; a clicar automaticamente.');
+        if (ownDamageConfirmInspectWaitMs > 0) {
+          await candidatePage.waitForTimeout(ownDamageConfirmInspectWaitMs);
+          metaState.steps.push(`own-damage-confirm -> inspect-wait ${ownDamageConfirmInspectWaitMs}ms`);
+        }
+        const clicked = await confirm.click({ timeout: 3000 }).then(() => true).catch(() => false);
+        if (!clicked) {
+          metaState.steps.push(`own-damage-confirm -> click-failed (${selector || confirmSelector})`);
+          continue;
+        }
+        metaState.ownDamageConfirmClick = {
+          selector,
+          pageUrl: candidatePage.url(),
+          frameUrl: frame.url(),
+          method: 'automatic-text-selector',
+          timestamp: Date.now(),
+        };
+        metaState.steps.push(`own-damage-confirm -> automatic-click (${selector || 'Confirmar'}) page=${candidatePage.url()} frame=${frame.url() || 'about:blank'}`);
+        return true;
+      }
+    }
+    await page.waitForTimeout(250);
+  }
+  metaState.steps.push('own-damage-confirm -> automatic-not-found');
+  return false;
 }
 
 async function waitForAutoFormReady(page, timeoutMs, metaState) {
@@ -4310,6 +5018,10 @@ try {
       : (preferLocalhostFirst ? 'localhost-first' : 'firestore-first');
   meta.simulationSourcePath = simulationSource?.path || null;
   meta.simulationPayloadSample = {
+    nome: simulationPayload.nome || null,
+    dataNascimento: simulationPayload.dataNascimento || simulationPayload.birthDate || null,
+    dataCartaConducao: simulationPayload.dataCartaConducao || simulationPayload.licenseDate || null,
+    genero: simulationPayload.genero || simulationPayload.gender || simulationPayload.sexo || null,
     matricula: simulationPayload.matricula || null,
     codigoPostal: simulationPayload.codigoPostal || null,
     marca: simulationPayload.marca || null,
@@ -4317,7 +5029,11 @@ try {
     ano: simulationPayload.ano || null,
     tipoSeguro: simulationPayload.tipoSeguro || null,
   };
+  const ownDamageSimulation = isOwnDamageAutoSimulation(simulationPayload);
+  const thirdPartySimulation = isThirdPartyAutoSimulation(simulationPayload);
+  meta.insuranceFlowDecision = ownDamageSimulation ? 'danos-proprios' : thirdPartySimulation ? 'terceiros' : 'desconhecido';
   console.log(`[transfer] Payload selecionado: ${meta.simulationSourcePath || 'não encontrado'} | marca=${simulationPayload.marca || '-'} | modelo=${simulationPayload.modelo || '-'} | matrícula=${simulationPayload.matricula || '-'}`);
+  console.log(`[transfer] Tipo de seguro recebido: ${simulationPayload.tipoSeguro || '-'} | fluxo=${meta.insuranceFlowDecision}`);
 
   // Auto-detectar job ID a partir do simulationSource (path = 'simulationTransferJobs/{id}')
   // Permite que o script escreva resultados de volta ao Firestore sem TRANSFER_JOB_ID manual
@@ -4476,50 +5192,14 @@ try {
   );
 
   await page.waitForTimeout(contribuintePostFillWaitMs);
-  const personNameWatchSelectors = [
-    'input[name*="nome" i]',
-    'input[id*="nome" i]',
-    'input[name*="tomador" i]',
-    'input[id*="tomador" i]',
-    'input[name*="cliente" i]',
-    'input[id*="cliente" i]',
-    'input[name*="segurado" i]',
-    'input[id*="segurado" i]',
-    'span[id*="nome" i]',
-    'div[id*="nome" i]',
-  ];
-  const nameBaseline = await snapshotValues(page, personNameWatchSelectors);
   const clickedContribLookup = await clickLookupNearField(page, contribuinteSelectors, 'contribuinte', meta);
   if (!clickedContribLookup) {
     throw new Error('Não foi possível clicar na lupa do contribuinte');
   }
   await updateDebugOverlay(page, 'nif-lookup-clicked');
-  const clienteReady = await waitForClienteContainerReady(
-    page,
-    clienteReadyWaitTimeoutMs,
-    clienteReadyPollMs,
-    meta
-  );
-  if (clienteReady) {
-    await updateDebugOverlay(page, 'cliente-ready -> avançar matrícula');
-  }
-
-  let nameResolved = clienteReady;
-  if (!nameResolved) {
-    await page.waitForTimeout(contribuintePostLookupWaitMs);
-    nameResolved = await waitForValueAppearance(
-      page,
-      personNameWatchSelectors,
-      nameBaseline,
-      contribuinteNameWaitTimeoutMs,
-      'contribuinte-name-loaded',
-      meta,
-      { allowExistingNonEmpty: true, pollIntervalMs: contribuinteNamePollMs }
-    );
-  }
-  if (!nameResolved) {
-    throw new Error('Nome da pessoa não apareceu após lookup do contribuinte');
-  }
+  await page.waitForTimeout(contribuintePostLookupWaitMs);
+  meta.steps.push('contribuinte-lookup -> continuar para matrícula; dados pessoais aguardam ecrã próprio');
+  await updateDebugOverlay(page, 'NIF validado -> continuar matrícula');
 
   const matriculaSelectors = [
     'input[name*="matric" i]',
@@ -4809,19 +5489,29 @@ try {
     }
   }
 
-  await fillFirstMatchingField(
+  const vehicleConfirmed = await waitForValueAppearance(
     page,
-    [
-      'input[name*="postal" i]',
-      'input[id*="postal" i]',
-      'input[name*="codigo" i]',
-      'input[id*="codigo" i]',
-      'input[placeholder*="postal" i]',
-    ],
-    simulationPayload.codigoPostal,
-    'codigoPostal',
-    meta
+    vehicleWatchSelectors,
+    vehicleBaseline,
+    vehicleLoadedWaitTimeoutMs,
+    'vehicle-selection-confirmed',
+    meta,
+    { allowExistingNonEmpty: true }
   );
+  if (!vehicleConfirmed) {
+    throw new Error('A viatura ainda não foi selecionada/carregada; não será clicado Seguinte');
+  }
+
+  meta.steps.push('dados-pessoais-tomador -> clicar Seguinte antes de fillPersonNameField');
+  const reachedTomadorScreen = await clickFinalSeguinteStep(page, meta, {
+    expectedVisibleSelector: zurichTomadorNameSelector,
+  });
+  if (!reachedTomadorScreen) {
+    throw new Error('O clique em Seguinte não avançou para o ecrã Tomador/Condutor');
+  }
+  meta.steps.push('dados-pessoais-tomador -> ecrã pós-matrícula disponível');
+  console.log(`[transfer] Payload dados pessoais: nome=${simulationPayload.nome || '-'} | nascimento=${simulationPayload.dataNascimento || simulationPayload.birthDate || '-'} | carta=${simulationPayload.dataCartaConducao || simulationPayload.licenseDate || '-'} | genero=${simulationPayload.genero || simulationPayload.gender || simulationPayload.sexo || '-'} | codigoPostal=${simulationPayload.codigoPostal || simulationPayload.postalCode || '-'}`);
+  await fillMissingZurichPersonData(page, simulationPayload, meta);
 
   await fillFirstMatchingField(
     page,
@@ -4832,19 +5522,6 @@ try {
     ],
     simulationPayload.email,
     'email',
-    meta
-  );
-
-  await fillFirstMatchingField(
-    page,
-    [
-      'input[name*="nome" i]',
-      'input[id*="nome" i]',
-      'input[name*="name" i]',
-      'input[id*="name" i]',
-    ],
-    simulationPayload.nome,
-    'nome',
     meta
   );
 
@@ -4998,11 +5675,46 @@ try {
           }
         }
       } else {
-      meta.steps.push('final-step-decision -> click-resumo-learned');
-      const clickedLearnedResumo = await clickLearnedResumoStep(page, meta);
-      if (clickedLearnedResumo && (shouldAdvanceLearnedResumoToCoberturas || shouldDragCoberturasSlider || shouldCalculateCoberturasAfterDrag || shouldPauseBeforeCoberturasCalculator || shouldPauseBeforeCoberturasReceiptDetails || shouldPauseAfterCoberturasSlider || shouldPauseBeforeAccordionScrape || shouldScrapeAccordionBeforeCalcular || shouldScrapeAccordionAfterSlider)) {
+      let clickedLearnedResumo = false;
+      let alreadyAtCoberturas = false;
+      if (isOwnDamageAutoSimulation(simulationPayload)) {
+        meta.steps.push(`final-step-decision -> own-damage-premium-flow (${simulationPayload.tipoSeguro})`);
+        const premiumSelected = shouldPauseBeforePremium
+          ? await pauseBeforePremiumCardStep(page, meta)
+          : await selectOpcaoPremiumStep(page, meta);
+        if (premiumSelected) {
+          if (shouldPauseBeforePremium) {
+            throw new ControlledPauseStop();
+          }
+          await capturePremiumDiagnostic(page, meta, 'before-coberturas-navigation');
+          if (ownDamagePremiumNextDelayMs > 0) {
+            await page.waitForTimeout(ownDamagePremiumNextDelayMs);
+            meta.steps.push(`own-damage-premium -> pre-seguinte-wait ${ownDamagePremiumNextDelayMs}ms`);
+          }
+          const clickedSeguinte = await clickLowerSeguinteStep(page, meta, { waitForNavigation: false });
+          await capturePremiumDiagnostic(page, meta, clickedSeguinte ? 'after-seguinte-click' : 'seguinte-not-found');
+          if (clickedSeguinte) await clickOwnDamageConfirmAutomatically(page, meta);
+          if (ownDamageCoberturasSettlingMs > 0) {
+            await page.waitForTimeout(ownDamageCoberturasSettlingMs);
+            meta.steps.push(`own-damage-coberturas -> settle-wait ${ownDamageCoberturasSettlingMs}ms`);
+          }
+          alreadyAtCoberturas = await waitForCoberturasPage(page, meta);
+          await capturePremiumDiagnostic(page, meta, alreadyAtCoberturas ? 'after-coberturas-url' : 'coberturas-url-not-reached');
+          if (!alreadyAtCoberturas) {
+            alreadyAtCoberturas = await navigateDirectlyToCoberturasStep(page, meta);
+            await capturePremiumDiagnostic(page, meta, alreadyAtCoberturas ? 'after-direct-coberturas' : 'direct-coberturas-failed');
+          }
+          clickedLearnedResumo = alreadyAtCoberturas;
+        }
+      } else {
+        meta.steps.push('final-step-decision -> click-resumo-learned');
+        clickedLearnedResumo = await clickLearnedResumoStep(page, meta);
+      }
+      if ((clickedLearnedResumo || alreadyAtCoberturas) && (shouldAdvanceLearnedResumoToCoberturas || shouldDragCoberturasSlider || shouldCalculateCoberturasAfterDrag || shouldPauseBeforeCoberturasCalculator || shouldPauseBeforeCoberturasReceiptDetails || shouldPauseAfterCoberturasSlider || shouldPauseBeforeAccordionScrape || shouldScrapeAccordionBeforeCalcular || shouldScrapeAccordionAfterSlider)) {
         meta.steps.push('final-step-decision -> click-resumo-learned-coberturas');
-        await advanceLearnedResumoToCoberturasStep(page, meta);
+        if (!alreadyAtCoberturas) {
+          await advanceLearnedResumoToCoberturasStep(page, meta);
+        }
         // Pausa manual para aprender o seletor de Vidros (apenas quando TRANSFER_PAUSE_FOR_GLASS_UNCHECK=true)
         if (shouldPauseForGlassUncheck) {
           await pauseForGlassUncheck(page, meta);
@@ -5145,5 +5857,9 @@ try {
     process.exitCode = 1;
   }
 } finally {
+  if (!headless && keepBrowserOpenMs > 0) {
+    console.log(`[transfer] browser keep-open: ${keepBrowserOpenMs}ms`);
+    await new Promise((resolve) => setTimeout(resolve, keepBrowserOpenMs));
+  }
   await browser.close();
 }

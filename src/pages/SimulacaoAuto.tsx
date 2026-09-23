@@ -26,6 +26,7 @@ interface FormState {
   dataNascimentoManual?: string;
   dataCartaConducao?: string;
   dataCartaConducaoManual?: string;
+  genero: string;
   modelo: string;
   marca?: string;
   versao?: string;
@@ -53,6 +54,8 @@ export default function SimulacaoAuto() {
     email: "",
     contribuinte: "",
     dataNascimento: "",
+    dataCartaConducao: "",
+    genero: "",
     modelo: "",
     marca: "",
     versao: "",
@@ -349,6 +352,7 @@ export default function SimulacaoAuto() {
       contribuinte: form.contribuinte,
       dataNascimento: form.dataNascimento ? formatDate(form.dataNascimento) : '',
       dataCartaConducao: form.dataCartaConducao ? formatDate(form.dataCartaConducao) : '',
+      genero: form.genero,
       codigoPostal: form.codigoPostal || '',
       modelo: form.modelo,
   versao: form.versao || '',
@@ -370,6 +374,7 @@ export default function SimulacaoAuto() {
         contribuinte: form.contribuinte,
         dataNascimento: form.dataNascimento,
         dataCartaConducao: form.dataCartaConducao,
+        genero: form.genero,
         codigoPostal: form.codigoPostal,
         marca: form.marca,
         modelo: form.modelo,
@@ -412,6 +417,7 @@ export default function SimulacaoAuto() {
               contribuinte: form.contribuinte,
               dataNascimento: form.dataNascimento,
               dataCartaConducao: form.dataCartaConducao,
+              genero: form.genero,
               codigoPostal: form.codigoPostal,
               marca: form.marca,
               modelo: form.modelo,
@@ -444,6 +450,10 @@ export default function SimulacaoAuto() {
               postalCode: form.codigoPostal,
               dataNascimento: form.dataNascimento,
               birthDate: form.dataNascimento,
+              dataCartaConducao: form.dataCartaConducao,
+              licenseDate: form.dataCartaConducao,
+              genero: form.genero,
+              gender: form.genero,
               contribuinte: form.contribuinte,
               marca: form.marca,
               modelo: form.modelo,
@@ -602,6 +612,18 @@ export default function SimulacaoAuto() {
                 }}
                 onInput={e => (e.target as HTMLInputElement).setCustomValidity('')}
               />
+              <select
+                name="genero"
+                value={form.genero}
+                onChange={handleChange}
+                className="as-input border-blue-300"
+                required
+              >
+                <option value="">{base === 'en' ? 'Gender' : 'Género'}</option>
+                <option value="masculino">{base === 'en' ? 'Male' : 'Masculino'}</option>
+                <option value="feminino">{base === 'en' ? 'Female' : 'Feminino'}</option>
+                <option value="outro">{base === 'en' ? 'Other' : 'Outro'}</option>
+              </select>
               <div className="w-full relative">
                 <DatePicker
                   selected={form.dataNascimento ? new Date(form.dataNascimento) : null}
@@ -1143,6 +1165,7 @@ export default function SimulacaoAuto() {
                                   contribuinte: form.contribuinte,
                                   dataNascimento: form.dataNascimento,
                                   dataCartaConducao: form.dataCartaConducao,
+                                  genero: form.genero,
                                   codigoPostal: form.codigoPostal,
                                   matricula: form.matricula,
                                   marca: form.marca,
