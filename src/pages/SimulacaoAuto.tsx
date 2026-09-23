@@ -92,7 +92,7 @@ export default function SimulacaoAuto() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'debito_direto' | 'multibanco'>('debito_direto');
   const [isSavingChoice, setIsSavingChoice] = useState(false);
   const [choiceSaved, setChoiceSaved] = useState(false);
-  const [countdownSeconds, setCountdownSeconds] = useState(90);
+  const [countdownSeconds, setCountdownSeconds] = useState(120);
   const transferTargetUrl = 'https://myzurich.zurich.com.pt/';
 
   // Persistir step e jobId em sessionStorage para sobreviver a recarregamentos
@@ -110,7 +110,7 @@ export default function SimulacaoAuto() {
 
   useEffect(() => {
     if (step !== 4 || simulationResult) return;
-    setCountdownSeconds(90);
+    setCountdownSeconds(120);
     const intervalId = window.setInterval(() => {
       setCountdownSeconds((seconds) => Math.max(0, seconds - 1));
     }, 1000);
