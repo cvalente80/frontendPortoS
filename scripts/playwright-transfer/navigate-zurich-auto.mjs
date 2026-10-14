@@ -24,10 +24,12 @@ const sourcePreferenceRaw = String(process.env.TRANSFER_SOURCE_PREFERENCE || '')
 const preferLocalhostFirst = sourcePreferenceRaw === 'localhost' || sourcePreferenceRaw === 'local' || sourcePreferenceRaw === 'localhost-first';
 const productionWatcher = String(process.env.WATCHER_ENV || '').trim().toLowerCase() === 'production';
 const headless = String(process.env.PW_HEADLESS || 'true').toLowerCase() !== 'false';
+const pauseAfterZurich = ['1', 'true', 'yes'].includes(String(process.env.PW_PAUSE_AFTER_ZURICH || 'false').trim().toLowerCase());
+const pauseOnWebmail = ['1', 'true', 'yes'].includes(String(process.env.PW_PAUSE_ON_WEBMAIL || 'false').trim().toLowerCase());
+const pauseAfterWebmail = ['1', 'true', 'yes'].includes(String(process.env.PW_PAUSE_AFTER_WEBMAIL || 'false').trim().toLowerCase());
 const slowMo = Number(process.env.PW_SLOW_MO || 0);
-const keepBrowserOpenMs = productionWatcher
-  ? Math.max(60000, Number.parseInt(String(process.env.TRANSFER_KEEP_BROWSER_OPEN_MS || '60000'), 10) || 60000)
-  : Math.max(0, Number.parseInt(String(process.env.TRANSFER_KEEP_BROWSER_OPEN_MS || '0'), 10) || 0);
+const genericClickTimeoutMs = Math.max(800, Number.parseInt(String(process.env.TRANSFER_GENERIC_CLICK_TIMEOUT_MS || '3000'), 10) || 3000);
+const keepBrowserOpenMs = Math.max(0, Number.parseInt(String(process.env.TRANSFER_KEEP_BROWSER_OPEN_MS || '0'), 10) || 0);
 const manualMatriculaCapture = ['1', 'true', 'yes'].includes(String(process.env.TRANSFER_MANUAL_MATRICULA_LUPA_CAPTURE || '').trim().toLowerCase());
 const manualMatriculaAfterNif = ['1', 'true', 'yes'].includes(String(process.env.TRANSFER_MANUAL_MATRICULA_AFTER_NIF || '').trim().toLowerCase());
 const manualSelectVehicleFirst = ['1', 'true', 'yes'].includes(String(process.env.TRANSFER_MANUAL_SELECT_VEHICLE_FIRST || '').trim().toLowerCase());
@@ -116,6 +118,7 @@ const finalStepBeforeSeguinteMs = Math.max(0, Number.parseInt(String(process.env
 const finalStepNextPageWaitMs = Math.max(1500, Number.parseInt(String(process.env.TRANSFER_FINAL_STEP_NEXT_PAGE_WAIT_MS || '7000'), 10) || 7000);
 const zurichTomadorNameSelector = '#Zurich_PT_Theme_wtZurich_PT_Theme_Layout_SideBar_block_WebPatterns_wt24_block_wtColumn1_wtMainContent_wt20_wtItems_wt275_wtContent_Simuladores_WB_wt424_block_wt57_wtInput_wtinp_Tomador_Nome';
 const zurichClienteSeguinteSelector = '#Zurich_PT_Theme_wtZurich_PT_Theme_Layout_SideBar_block_WebPatterns_wt24_block_wtColumn1_wtMainContent_wt20_wtItems_wt275_wtActions_wtlnk_Seguinte_Cliente';
+const zurichGlassInputSelector = '#Zurich_PT_Theme_wt146_block_WebPatterns_wt24_block_wtColumn1_wtMainContent_wtlr_Objectos_ctl00_wt407_wtItems_wt643_wtContent_Zurich_PT_Patterns_wt35_block_WebPatterns_wt2_block_wtCheckbox_wtCheckbox_wt717';
 const forcedMatriculaLupaSelector = String(process.env.TRANSFER_MATRICULA_LUPA_SELECTOR || '').trim();
 const defaultMatriculaLupaSelector = 'div.WSearch.T3:nth-of-type(1) > div.Text_Note.OSInline:nth-of-type(2) > span.fa.fa-fw';
 const effectiveMatriculaLupaSelector = forcedMatriculaLupaSelector || defaultMatriculaLupaSelector;
@@ -144,7 +147,8 @@ const contribuintePostFillWaitMs = Math.max(0, Number.parseInt(String(process.en
 const contribuintePostLookupWaitMs = Math.max(0, Number.parseInt(String(process.env.TRANSFER_CONTRIBUINTE_POST_LOOKUP_MS || '120'), 10) || 120);
 const contribuinteNameWaitTimeoutMs = Math.max(1200, Number.parseInt(String(process.env.TRANSFER_CONTRIBUINTE_NAME_WAIT_MS || '3500'), 10) || 3500);
 const contribuinteNamePollMs = Math.max(60, Number.parseInt(String(process.env.TRANSFER_CONTRIBUINTE_NAME_POLL_MS || '120'), 10) || 120);
-const codigoPostalTypeDelayMs = Math.max(80, Number.parseInt(String(process.env.TRANSFER_CODIGO_POSTAL_TYPE_DELAY_MS || '220'), 10) || 220);
+const codigoPostalTabPauseMs = Math.max(100, Number.parseInt(String(process.env.TRANSFER_CODIGO_POSTAL_TAB_PAUSE_MS || '300'), 10) || 300);
+const codigoPostalPostInputWaitMs = Math.max(150, Number.parseInt(String(process.env.TRANSFER_CODIGO_POSTAL_POST_INPUT_WAIT_MS || '600'), 10) || 600);
 const simularPostClickReadyTimeoutMs = Math.max(1500, Number.parseInt(String(process.env.TRANSFER_SIMULAR_READY_TIMEOUT_MS || '10000'), 10) || 10000);
 const matriculaAutoDialogInitialWaitMs = Math.max(80, Number.parseInt(String(process.env.TRANSFER_MATRICULA_AUTO_DIALOG_WAIT_MS || '200'), 10) || 200);
 const loginStepTransitionMs = Math.max(0, Number.parseInt(String(process.env.TRANSFER_LOGIN_STEP_TRANSITION_MS || '500'), 10) || 500);
@@ -276,6 +280,9 @@ async function readLatestAmenVerificationCode(metaState) {
 
   try {
     await mailPage.goto(emailWebmailUrl, { waitUntil: 'domcontentloaded', timeout: emailInboxWaitMs });
+    if (pauseOnWebmail) {
+      await mailPage.pause();
+    }
 
     await acceptAmenWebmailCookies(mailPage, metaState);
 
@@ -685,6 +692,10 @@ async function completeEmailVerificationIfPresent(page, metaState) {
     timeout: Math.max(loginLandingWaitTimeoutMs, emailVerificationWaitMs),
   }).catch(() => null);
 
+  if (pauseAfterWebmail) {
+    await page.pause();
+  }
+
   metaState.steps.push('email-verification -> submitted');
   return true;
 }
@@ -865,13 +876,24 @@ async function fillFirstMatchingField(page, selectors, value, fieldLabel, metaSt
 async function fillPersonNameField(page, selectors, value, metaState) {
   if (value === undefined || value === null || String(value).trim() === '') return false;
   const expectedValue = String(value).trim();
+  const legacyNameSelector = selectors[0];
+  const legacyNameFieldVisible = legacyNameSelector
+    ? await page.locator(legacyNameSelector).first().isVisible().catch(() => false)
+    : false;
+  const selectorsToTry = legacyNameFieldVisible ? [legacyNameSelector] : selectors;
   metaState.steps.push('dados-pessoais-tomador -> iniciar preenchimento Nome');
   console.log('[transfer] Dados do tomador: a iniciar preenchimento do Nome');
-  for (const selector of selectors) {
+  for (const selector of selectorsToTry) {
     const locator = page.locator(selector).first();
     if (!await locator.count().catch(() => 0)) continue;
     if (!await locator.isVisible().catch(() => false)) continue;
     try {
+      const existingValue = await locator.inputValue().catch(() => '');
+      if (existingValue.trim() === expectedValue) {
+        metaState.steps.push(`prefill nome-tomador -> ${selector} (já preenchido pelo contribuinte)`);
+        console.log(`[transfer] Dados do tomador: Nome já preenchido (${selector})`);
+        return true;
+      }
       await locator.scrollIntoViewIfNeeded().catch(() => null);
       await locator.click({ force: true, timeout: 5000 });
       await locator.fill(expectedValue);
@@ -891,6 +913,66 @@ async function fillPersonNameField(page, selectors, value, metaState) {
       metaState.steps.push(`prefill nome-tomador -> ${selector} error=${error?.message || String(error)}`);
     }
   }
+
+  const nameAlreadyDisplayed = await page.evaluate((expected) => {
+    const normalize = (text) => String(text || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const wanted = normalize(expected);
+    const visible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+    };
+
+    const valueFields = Array.from(document.querySelectorAll('input,textarea,[contenteditable="true"]'))
+      .filter(visible)
+      .map((element) => element.value || element.textContent || '')
+      .some((text) => normalize(text) === wanted);
+    if (valueFields) return true;
+
+    return Array.from(document.querySelectorAll('label,span,div,p,td,dd,strong'))
+      .filter(visible)
+      .some((element) => {
+        if (normalize(element.textContent) !== wanted) return false;
+        const container = element.closest('tr,td,div,section,article,li') || element.parentElement;
+        return /nome|tomador|segurado/i.test(normalize(container?.textContent));
+      });
+  }, expectedValue).catch(() => false);
+
+  if (nameAlreadyDisplayed) {
+    metaState.steps.push('prefill nome-tomador -> já apresentado pelo contribuinte');
+    console.log('[transfer] Dados do tomador: Nome já apresentado pelo contribuinte');
+    return true;
+  }
+
+  const visibleNameDiagnostics = await page.evaluate(() => {
+    const visible = (element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(element);
+      const rect = element.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+    };
+    return Array.from(document.querySelectorAll('input,textarea,select,[contenteditable="true"]'))
+      .filter(visible)
+      .map((element) => ({
+        tag: element.tagName.toLowerCase(),
+        id: element.id || '',
+        name: element.getAttribute('name') || '',
+        type: element.getAttribute('type') || '',
+        value: element.value || element.textContent || '',
+        disabled: Boolean(element.disabled),
+        readOnly: Boolean(element.readOnly),
+        placeholder: element.getAttribute('placeholder') || '',
+        ariaLabel: element.getAttribute('aria-label') || '',
+      }));
+  }).catch(() => []);
+  metaState.steps.push(`prefill nome-tomador -> visible-controls=${visibleNameDiagnostics.length}`);
+  await fs.writeFile(
+    path.join(dir, 'tomador-name-debug.json'),
+    JSON.stringify({ expectedValue, legacyNameSelector, legacyNameFieldVisible, controls: visibleNameDiagnostics }, null, 2),
+    'utf8'
+  ).catch(() => null);
+
   metaState.steps.push('prefill nome-tomador -> not-found');
   console.log('[transfer] Dados do tomador: não foi possível preencher o Nome');
   return false;
@@ -900,7 +982,10 @@ async function fillPostalCodeDigitByDigit(page, selectors, value, fieldLabel, me
   if (value === undefined || value === null || String(value).trim() === '') return false;
   const rawValue = String(value).trim();
   const digits = rawValue.replace(/\D/g, '');
-  if (!digits) return false;
+  if (digits.length !== 7) {
+    metaState.steps.push(`prefill ${fieldLabel} -> invalid-format (${rawValue})`);
+    return false;
+  }
 
   for (const selector of selectors) {
     const matched = page.locator(selector).first();
@@ -916,14 +1001,22 @@ async function fillPostalCodeDigitByDigit(page, selectors, value, fieldLabel, me
       if (!await locator.count().catch(() => 0) || !await locator.isVisible().catch(() => false)) continue;
       await locator.scrollIntoViewIfNeeded().catch(() => null);
       await locator.click({ force: true });
-      await locator.selectText().catch(() => null);
+      await page.keyboard.down('Control');
+      await locator.press('KeyA').catch(() => null);
+      await page.keyboard.up('Control');
       await locator.press('Backspace').catch(() => null);
-      await locator.pressSequentially(rawValue, { delay: codigoPostalTypeDelayMs });
+      const formattedValue = `${digits.slice(0, 4)}-${digits.slice(4)}`;
+      await locator.fill(formattedValue);
+      await locator.press('Tab').catch(() => null);
+      await page.waitForTimeout(codigoPostalTabPauseMs);
+      await page.keyboard.press('Shift+Tab').catch(() => null);
+      await page.waitForTimeout(codigoPostalTabPauseMs);
+      await page.waitForTimeout(codigoPostalPostInputWaitMs);
+
       const actualValue = await locator.inputValue().catch(() => '');
       if (actualValue.replace(/\D/g, '') !== digits) continue;
-      await page.locator('body').click({ position: { x: 12, y: 12 } }).catch(() => null);
-      await page.waitForTimeout(codigoPostalTypeDelayMs);
-      metaState.steps.push(`prefill ${fieldLabel} -> ${selector} (digits-only)`);
+
+      metaState.steps.push(`prefill ${fieldLabel} -> ${selector} (human-typed, masked, blurred)`);
       return true;
     } catch {
       continue;
@@ -1029,6 +1122,28 @@ async function selectCustomDropdownOption(page, selectors, value, fieldLabel, me
   return false;
 }
 
+async function isExistingZurichClient(page, metaState) {
+  const state = await page.evaluate(() => {
+    const birthDate = document.querySelector('input[id*="DataNascimento" i], input[name*="DataNascimento" i], input[name*="nascimento" i], input[id*="nascimento" i]');
+    const licenseDate = document.querySelector('input[id*="DataCartaConducao" i], input[name*="DataCartaConducao" i], input[name*="carta" i], input[id*="carta" i]');
+    const gender = document.querySelector('select[id*="Genero" i], select[name*="Genero" i], select[name*="sexo" i], select[id*="sexo" i], select[name*="gender" i], select[id*="gender" i]');
+    const postalCode = document.querySelector('input[id*="Cliente_CP" i], input[name*="Cliente_CP" i], input[name*="postal" i], input[id*="postal" i], input[name*="codigo" i], input[id*="codigo" i]');
+    const hasValue = (element) => Boolean(String(element?.value || '').trim());
+    const locked = (element) => Boolean(element?.readOnly || element?.disabled);
+    return {
+      birthDate: hasValue(birthDate) && locked(birthDate),
+      licenseDate: hasValue(licenseDate) && locked(licenseDate),
+      gender: hasValue(gender) && locked(gender),
+      postalCode: hasValue(postalCode) && locked(postalCode),
+    };
+  }).catch(() => ({ birthDate: false, licenseDate: false, gender: false, postalCode: false }));
+
+  const lockedFields = Object.values(state).filter(Boolean).length;
+  const existingClient = state.birthDate && state.postalCode && (state.gender || state.licenseDate);
+  metaState.steps.push(`cliente-existente -> ${existingClient ? 'dados-encontrados' : 'dados-para-preencher'} (${lockedFields}/4 campos bloqueados)`);
+  return existingClient;
+}
+
 async function fillMissingZurichPersonData(page, simulationPayload, metaState) {
   const nameSelectors = [
     zurichTomadorNameSelector,
@@ -1044,6 +1159,12 @@ async function fillMissingZurichPersonData(page, simulationPayload, metaState) {
   ];
   const genderValue = simulationPayload.genero || simulationPayload.gender || simulationPayload.sexo;
   const postalCodeValue = simulationPayload.codigoPostal || simulationPayload.postalCode;
+
+  if (await isExistingZurichClient(page, metaState)) {
+    metaState.steps.push('dados-pessoais-tomador -> cliente existente, ignorar nome/datas/género/código postal');
+    console.log('[transfer] Cliente existente: dados pessoais já encontrados, não preencher nome/datas/género/código postal');
+    return true;
+  }
 
   if (!await fillPersonNameField(page, nameSelectors, simulationPayload.nome, metaState)) throw new Error('Não foi possível preencher o nome do tomador');
   if (!await fillFirstMatchingDateField(page, birthDateSelectors, simulationPayload.dataNascimento || simulationPayload.birthDate, 'data-nascimento-tomador', metaState)) throw new Error('Não foi possível preencher a data de nascimento do tomador');
@@ -1065,10 +1186,15 @@ async function fillMissingZurichPersonData(page, simulationPayload, metaState) {
   try {
     await seguinteCliente.click({ timeout: 3000 });
     metaState.steps.push('dados-pessoais-tomador -> Seguinte após código postal clicado');
+    await page.waitForLoadState('domcontentloaded', { timeout: Math.max(2500, finalStepNextPageWaitMs) }).catch(() => null);
+    await page.waitForLoadState('networkidle', { timeout: Math.max(3000, finalStepNextPageWaitMs) }).catch(() => null);
+    await page.waitForTimeout(750);
+    metaState.steps.push(`dados-pessoais-tomador -> transição estabilizada (${page.url()})`);
   } catch (error) {
     metaState.steps.push(`dados-pessoais-tomador -> Seguinte após código postal falhou: ${error?.message || String(error)}`);
     throw new Error(`Não foi possível clicar em Seguinte após o código postal em 3 segundos: ${error?.message || String(error)}`);
   }
+  return false;
 }
 
 async function forceFocusMatriculaField(page, selectors, metaState, stepLabel = 'matricula-focus', options = {}) {
@@ -3406,22 +3532,22 @@ async function pauseForGlassUncheck(page, metaState) {
   const pauseShot = path.join(dir, '99-glass-uncheck-pause.png');
   await page.screenshot({ path: pauseShot, fullPage: false }).catch(() => null);
   metaState.pauseScreenshot = pauseShot;
-  await updateDebugOverlay(page, 'PAUSADO: clica no checkbox/radio de Quebra de Vidros para o desativar');
+  await updateDebugOverlay(page, 'PAUSADO: clica no checkbox de Quebra de Vidros para o ativar');
   console.log('[transfer] ⏸  PAUSADO na página Coberturas.');
-  console.log('[transfer]    👆 Clica no elemento de "Quebra de Vidros" (checkbox ou radio) para o desativar.');
+  console.log('[transfer]    👆 Clica no elemento de "Quebra de Vidros" para o ativar.');
   console.log('[transfer]    O seletor será aprendido e guardado no meta.json.');
-  const payload = await captureSingleUserClickPassive(page, 'glass-uncheck-manual-click', metaState, 120000);
+  const payload = await captureSingleUserClickPassive(page, 'glass-activate-manual-click', metaState, 120000);
   if (payload) {
-    metaState.learnedGlassUncheckSelector = payload.selector || null;
-    metaState.learnedGlassUncheckClick = payload;
-    metaState.steps.push(`glass-uncheck-pause -> clique registado: ${payload.selector || 'unknown'} @${payload.x},${payload.y}`);
+    metaState.learnedGlassActivateSelector = payload.selector || null;
+    metaState.learnedGlassActivateClick = payload;
+    metaState.steps.push(`glass-activate-pause -> clique registado: ${payload.selector || 'unknown'} @${payload.x},${payload.y}`);
     console.log(`[transfer] ✅ Clique registado: ${payload.selector || 'unknown'} @${payload.x},${payload.y}`);
-    console.log('[transfer]    Guarda este seletor em TRANSFER_GLASS_UNCHECK_SELECTOR no .env.playwright.local para automatizar.');
+    console.log('[transfer]    Guarda este seletor para automatizar a ativação dos vidros.');
     // Aguardar recálculo após o clique
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null);
     await page.waitForTimeout(800);
   } else {
-    metaState.steps.push('glass-uncheck-pause -> timeout, sem clique');
+    metaState.steps.push('glass-activate-pause -> timeout, sem clique');
     console.log('[transfer] ⚠️  Timeout — sem clique registado.');
   }
 }
@@ -3457,30 +3583,36 @@ async function pauseAndLearnBaseCardStep(page, metaState) {
 }
 
 /**
- * Se o utilizador NÃO selecionou "Vidros" nas coberturas adicionais,
- * desativa a opção "Quebra de Vidros" na página Coberturas da Zurich.
- * A Zurich apresenta esta cobertura como radio buttons (QV Essencial / Quebra Vidros / QV-Marca)
- * dentro de uma linha de coberturas complementares. Para desativar, clicamos
- * no radio já selecionado (toggle-off) ou procuramos uma opção vazia/nenhuma.
+ * Sincroniza a opção "Quebra de Vidros" na página Coberturas da Zurich.
+ * A Zurich pode apresentar esta cobertura como checkbox ou radio buttons.
  */
 async function uncheckGlassIfNotRequested(page, metaState, simulationPayload) {
   const coberturas = Array.isArray(simulationPayload?.coberturas) ? simulationPayload.coberturas : [];
-  // Normalizar: verificar se alguma cobertura inclui "vidro" (PT) ou "glass"/"windscreen" (EN)
   const wantsGlass = coberturas.some((c) =>
-    String(c).toLowerCase().includes('vidro') ||
-    String(c).toLowerCase().includes('glass') ||
-    String(c).toLowerCase().includes('windscreen') ||
-    String(c).toLowerCase().includes('qv')
+    String(c?.name || c?.label || c?.title || c).toLowerCase().includes('vidro') ||
+    String(c?.name || c?.label || c?.title || c).toLowerCase().includes('glass') ||
+    String(c?.name || c?.label || c?.title || c).toLowerCase().includes('windscreen') ||
+    String(c?.name || c?.label || c?.title || c).toLowerCase().includes('qv')
   );
 
   if (wantsGlass) {
-    metaState.steps.push('coberturas-glass -> requested, skip uncheck');
-    return;
+    const glassInput = page.locator(zurichGlassInputSelector).first();
+    if (await glassInput.count().catch(() => 0)) {
+      const checked = await glassInput.isChecked().catch(() => false);
+      if (!checked) {
+        await glassInput.click({ force: true });
+        await page.waitForTimeout(600);
+        await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null);
+        metaState.steps.push('coberturas-glass -> exact-input selected');
+      } else {
+        metaState.steps.push('coberturas-glass -> exact-input already-selected');
+      }
+      return;
+    }
+    metaState.steps.push(`coberturas-glass -> exact-input not-found (${zurichGlassInputSelector})`);
   }
 
-  // Tentar desativar: procurar o radio/checkbox atualmente selecionado dentro da row de Quebra de Vidros
-  // e clicar nele (toggle-off) ou clicar numa opção "Nenhuma/Sem cobertura"
-  const unchecked = await page.evaluate(() => {
+  const synced = await page.evaluate((shouldSelect) => {
     // Encontrar o container/row que contém o texto "Quebra de Vidros" ou "QV"
     const allLabels = Array.from(document.querySelectorAll('label, td, div, span, th'));
     const glassContainer = allLabels.find((el) => {
@@ -3498,7 +3630,26 @@ async function uncheckGlassIfNotRequested(page, metaState, simulationPayload) {
       // Verificar se esta row tem inputs
       const inputs = Array.from(row.querySelectorAll('input[type="radio"], input[type="checkbox"]'));
       if (inputs.length > 0) {
-        // Tentar encontrar opção sem valor / vazia (representa "sem cobertura")
+        if (shouldSelect) {
+          const uncheckedCheckbox = inputs.find((inp) => inp.type === 'checkbox' && !inp.checked);
+          if (uncheckedCheckbox) {
+            uncheckedCheckbox.click();
+            return { found: true, action: 'checked-checkbox' };
+          }
+
+          const selectedInput = inputs.find((inp) => inp.checked);
+          if (selectedInput) {
+            return { found: true, action: 'already-selected', type: selectedInput.type };
+          }
+
+          const selectableInput = inputs.find((inp) => inp.type === 'radio');
+          if (selectableInput) {
+            selectableInput.click();
+            return { found: true, action: 'selected-radio', value: selectableInput.value };
+          }
+          return { found: true, action: 'no-selectable-input' };
+        }
+
         const emptyOpt = inputs.find((inp) => {
           const v = String(inp.value || '').trim();
           return v === '' || v === '0' || v === 'none' || v === 'nenhuma';
@@ -3526,11 +3677,11 @@ async function uncheckGlassIfNotRequested(page, metaState, simulationPayload) {
       }
     }
     return { found: false, reason: 'no-inputs-in-row' };
-  }).catch(() => ({ found: false, reason: 'evaluate-error' }));
+  }, wantsGlass).catch(() => ({ found: false, reason: 'evaluate-error' }));
 
-  metaState.steps.push(`coberturas-glass -> uncheck result: ${JSON.stringify(unchecked)}`);
+  metaState.steps.push(`coberturas-glass -> ${wantsGlass ? 'select' : 'uncheck'} result: ${JSON.stringify(synced)}`);
 
-  if (unchecked?.found && unchecked?.action !== 'no-checked-input-found') {
+  if (synced?.found && !['no-checked-input-found', 'already-selected', 'no-selectable-input'].includes(synced.action)) {
     await page.waitForTimeout(600);
     // Aguardar recalculo (a página pode fazer AJAX)
     await page.waitForLoadState('networkidle', { timeout: 5000 }).catch(() => null);
@@ -3550,6 +3701,10 @@ async function advanceLearnedResumoToCoberturasStep(page, metaState) {
   if (reachedCoberturas) {
     metaState.steps.push('final-step-resumo-coberturas -> success');
     if (shouldPauseOnCoberturas) {
+
+        if (shouldPauseForGlassUncheck) {
+          await pauseForGlassUncheck(page, meta);
+        }
       await pauseOnCoberturasForManualInstruction(page, metaState);
       throw new ControlledPauseStop();
     }
@@ -4004,10 +4159,10 @@ async function clickFirstVisible(locators, stepLabel) {
       const visible = await candidate.isVisible().catch(() => false);
       if (!visible) continue;
       try {
-        await candidate.click({ timeout: 15000 });
+        await candidate.click({ timeout: genericClickTimeoutMs, noWaitAfter: true });
       } catch {
         try {
-          await candidate.click({ force: true, timeout: 15000 });
+          await candidate.click({ force: true, timeout: genericClickTimeoutMs, noWaitAfter: true });
         } catch {
           continue;
         }
@@ -4329,15 +4484,38 @@ async function clickFinalSeguinteStep(page, metaState, options = {}) {
   await page.waitForLoadState('networkidle', { timeout: Math.max(3000, finalStepNextPageWaitMs) }).catch(() => null);
   await page.waitForTimeout(500);
   metaState.steps.push(`final-step-click-seguinte -> waited-next-page ${finalStepNextPageWaitMs}ms`);
-  if (options.expectedVisibleSelector) {
-    const expectedField = page.locator(options.expectedVisibleSelector).first();
-    const reachedExpectedScreen = await expectedField.waitFor({ state: 'visible', timeout: finalStepNextPageWaitMs }).then(() => true).catch(() => false);
+  const primaryExpectedSelector = options.expectedVisibleSelector;
+  const primarySelectorExists = primaryExpectedSelector
+    ? await page.locator(primaryExpectedSelector).count().catch(() => 0) > 0
+    : false;
+  const expectedVisibleSelectors = primarySelectorExists
+    ? [primaryExpectedSelector]
+    : [
+      primaryExpectedSelector,
+      ...(Array.isArray(options.expectedVisibleSelectors) ? options.expectedVisibleSelectors : []),
+    ].filter(Boolean);
+  if (expectedVisibleSelectors.length) {
+    const expectedStartedAt = Date.now();
+    let reachedExpectedScreen = false;
+    let reachedSelector = '';
+    while (Date.now() - expectedStartedAt < finalStepNextPageWaitMs) {
+      for (const selector of expectedVisibleSelectors) {
+        const expectedField = page.locator(selector).first();
+        if (await expectedField.isVisible().catch(() => false)) {
+          reachedExpectedScreen = true;
+          reachedSelector = selector;
+          break;
+        }
+      }
+      if (reachedExpectedScreen) break;
+      await page.waitForTimeout(150);
+    }
     if (!reachedExpectedScreen) {
-      metaState.steps.push(`final-step-click-seguinte -> transition-not-confirmed (${options.expectedVisibleSelector})`);
-      console.log(`[transfer] Seguinte não confirmou o ecrã esperado: ${options.expectedVisibleSelector}`);
+      metaState.steps.push(`final-step-click-seguinte -> transition-not-confirmed (${expectedVisibleSelectors.join(' | ')})`);
+      console.log(`[transfer] Seguinte não confirmou o ecrã esperado: ${expectedVisibleSelectors.join(' | ')}`);
       return false;
     }
-    metaState.steps.push(`final-step-click-seguinte -> transition-confirmed (${options.expectedVisibleSelector})`);
+    metaState.steps.push(`final-step-click-seguinte -> transition-confirmed (${reachedSelector})`);
   }
   metaState.steps.push('final-step-click-seguinte -> success');
   return true;
@@ -4415,9 +4593,17 @@ function isOwnDamageAutoSimulation(simulationPayload) {
 async function selectNamedOptionStep(page, metaState, optionRegex, stepLabel, options = {}) {
   const learnedSelector = String(options.learnedSelector || '').trim();
   const cardSelector = String(options.cardSelector || '').trim();
+  const preferredIndex = Math.max(0, Number.isInteger(options.preferredIndex) ? options.preferredIndex : 0);
   await page.waitForLoadState('domcontentloaded', { timeout: Math.max(2500, finalStepNextPageWaitMs) }).catch(() => null);
   await page.waitForLoadState('networkidle', { timeout: Math.max(3000, finalStepNextPageWaitMs) }).catch(() => null);
   await page.waitForTimeout(250);
+
+  const optionHeading = page.getByText(optionRegex).first();
+  const optionScreenReady = await optionHeading.waitFor({ state: 'visible', timeout: finalStepNextPageWaitMs }).then(() => true).catch(() => false);
+  if (!optionScreenReady) {
+    metaState.steps.push(`${stepLabel} -> option-screen-not-ready (${page.url()})`);
+    return false;
+  }
 
   if (learnedSelector) {
     const learnedClicked = await clickForcedSelector(page, learnedSelector, `${stepLabel}-learned-selector`, metaState);
@@ -4438,7 +4624,7 @@ async function selectNamedOptionStep(page, metaState, optionRegex, stepLabel, op
     metaState.steps.push(`${stepLabel}-card-selector -> not-found (${cardSelector})`);
   }
 
-  const planActionClicked = await clickPlanCardActionByText(page, optionRegex, `${stepLabel}-plan-card`, 0);
+  const planActionClicked = await clickPlanCardActionByText(page, optionRegex, `${stepLabel}-plan-card`, preferredIndex);
   if (planActionClicked) {
     await page.waitForTimeout(250);
     metaState.steps.push(`${stepLabel} -> success`);
@@ -4448,7 +4634,7 @@ async function selectNamedOptionStep(page, metaState, optionRegex, stepLabel, op
   const selectButtonInMatchingCard = await clickVisibleByPreferredIndex([
     { name: `${stepLabel} select button in card`, locator: page.locator('div,section,article,li').filter({ hasText: optionRegex }).locator('button,a,input[type="submit"],input[type="button"]').filter({ hasText: /Selecionar|Escolher|Aderir|Continuar|Seguinte/i }) },
     { name: `${stepLabel} exact submit in card`, locator: page.locator('div,section,article,li').filter({ hasText: optionRegex }).locator('input[type="submit"][value*="Selecionar" i], input[type="button"][value*="Selecionar" i], input[type="submit"][value*="Seleccionar" i], input[type="button"][value*="Seleccionar" i], input[type="submit"][value*="Escolher" i], input[type="button"][value*="Escolher" i]') },
-  ], `${stepLabel}-select-button`, 0);
+  ], `${stepLabel}-select-button`, preferredIndex);
 
   if (selectButtonInMatchingCard) {
     await page.waitForTimeout(250);
@@ -4456,7 +4642,7 @@ async function selectNamedOptionStep(page, metaState, optionRegex, stepLabel, op
     return true;
   }
 
-  const cardClicked = await clickOptionCardByText(page, optionRegex, `${stepLabel}-card`, 0);
+  const cardClicked = await clickOptionCardByText(page, optionRegex, `${stepLabel}-card`, preferredIndex);
   if (cardClicked) {
     await page.waitForTimeout(250);
     metaState.steps.push(`${stepLabel} -> success`);
@@ -4471,7 +4657,7 @@ async function selectNamedOptionStep(page, metaState, optionRegex, stepLabel, op
     { name: `${stepLabel} label`, locator: page.locator('label').filter({ hasText: optionRegex }) },
     { name: `${stepLabel} input value`, locator: page.locator('input[type="radio"], input[type="checkbox"]').filter({ hasText: optionRegex }) },
     { name: `${stepLabel} fallback text container`, locator: page.locator('a,button,div,span,li').filter({ hasText: optionRegex }) },
-  ], stepLabel, 0);
+  ], stepLabel, preferredIndex);
 
   if (!selected) {
     const fallbackSelected = await clickByTextFallback(optionRegex, `${stepLabel}-fallback`);
@@ -4492,8 +4678,11 @@ async function selectOpcaoBaseStep(page, metaState) {
 }
 
 async function selectOpcaoEssencialStep(page, metaState) {
-  const essentialRegex = /Opção\s*Essencial|Opcao\s*Essencial|Essencial/i;
-  return selectNamedOptionStep(page, metaState, essentialRegex, 'final-step-select-opcao-essencial', { learnedSelector: learnedEssencialCardSelector });
+  const essentialRegex = /Opção\s*Essencial|Opcao\s*Essencial/i;
+  return selectNamedOptionStep(page, metaState, essentialRegex, 'final-step-select-opcao-essencial', {
+    learnedSelector: learnedEssencialCardSelector,
+    preferredIndex: 1,
+  });
 }
 
 async function selectOpcaoPremiumStep(page, metaState) {
@@ -5064,6 +5253,9 @@ try {
   }
 
   await page.goto('https://myzurich.zurich.com.pt/', { waitUntil: 'domcontentloaded', timeout: 45000 });
+  if (pauseAfterZurich) {
+    await page.pause();
+  }
   await updateDebugOverlay(page, 'login-page-opened');
   await page.waitForSelector('#Input_LoginUsername', { timeout: 20000 });
   await page.fill('#Input_LoginUsername', process.env.TRANSFER_LOGIN_USERNAME || '');
@@ -5505,14 +5697,20 @@ try {
   meta.steps.push('dados-pessoais-tomador -> clicar Seguinte antes de fillPersonNameField');
   const reachedTomadorScreen = await clickFinalSeguinteStep(page, meta, {
     expectedVisibleSelector: zurichTomadorNameSelector,
+    expectedVisibleSelectors: [
+      'input[name*="nome" i]',
+      'input[id*="nome" i]',
+      'input[name*="name" i]',
+      'input[id*="name" i]',
+      'input[name*="nascimento" i]',
+      'input[id*="nascimento" i]',
+    ],
   });
   if (!reachedTomadorScreen) {
     throw new Error('O clique em Seguinte não avançou para o ecrã Tomador/Condutor');
   }
   meta.steps.push('dados-pessoais-tomador -> ecrã pós-matrícula disponível');
   console.log(`[transfer] Payload dados pessoais: nome=${simulationPayload.nome || '-'} | nascimento=${simulationPayload.dataNascimento || simulationPayload.birthDate || '-'} | carta=${simulationPayload.dataCartaConducao || simulationPayload.licenseDate || '-'} | genero=${simulationPayload.genero || simulationPayload.gender || simulationPayload.sexo || '-'} | codigoPostal=${simulationPayload.codigoPostal || simulationPayload.postalCode || '-'}`);
-  await fillMissingZurichPersonData(page, simulationPayload, meta);
-
   await fillFirstMatchingField(
     page,
     [
@@ -5525,8 +5723,15 @@ try {
     meta
   );
 
+  const existingZurichClient = await fillMissingZurichPersonData(page, simulationPayload, meta);
+
   if (shouldAdvanceThirdPartyToCoberturas) {
-    await clickFinalSeguinteStep(page, meta);
+    if (existingZurichClient) {
+      meta.steps.push('cliente-existente -> já em seleção de pacote após primeiro Seguinte');
+      console.log('[transfer] Cliente existente: já em seleção de pacote, sem segundo Seguinte');
+    } else {
+      await clickFinalSeguinteStep(page, meta);
+    }
 
     if (pauseAfterSeguinteMs > 0) {
       meta.steps.push(`pause-after-seguinte -> ${pauseAfterSeguinteMs}ms (sem captura)`);
@@ -5552,6 +5757,11 @@ try {
         const reachedCoberturas = await waitForCoberturasPage(page, meta);
         if (!reachedCoberturas) {
           await navigateDirectlyToCoberturasStep(page, meta);
+        }
+        if (shouldPauseForGlassUncheck) {
+          await pauseForGlassUncheck(page, meta);
+        } else {
+          await uncheckGlassIfNotRequested(page, meta, simulationPayload);
         }
 
         if (shouldDragCoberturasSlider || shouldCalculateCoberturasAfterDrag || shouldPauseBeforeCoberturasCalculator || shouldPauseBeforeCoberturasReceiptDetails || shouldPauseAfterCoberturasSlider || shouldPauseBeforeAccordionScrape || shouldScrapeAccordionBeforeCalcular || shouldScrapeAccordionAfterSlider) {
@@ -5643,6 +5853,7 @@ try {
           if (!reachedCoberturas) {
             await navigateDirectlyToCoberturasStep(page, meta);
           }
+          await uncheckGlassIfNotRequested(page, meta, simulationPayload);
           if (shouldDragCoberturasSlider || shouldCalculateCoberturasAfterDrag || shouldPauseBeforeCoberturasCalculator || shouldPauseBeforeCoberturasReceiptDetails || shouldPauseAfterCoberturasSlider || shouldPauseBeforeAccordionScrape || shouldScrapeAccordionBeforeCalcular || shouldScrapeAccordionAfterSlider) {
             meta.steps.push('terceiros-drag-flow -> drag-coberturas-slider');
             await dragCoberturasSliderStep(page, meta);
@@ -5719,8 +5930,10 @@ try {
         if (shouldPauseForGlassUncheck) {
           await pauseForGlassUncheck(page, meta);
         }
-        // Desativar Quebra de Vidros se não foi pedida pelo utilizador
-        await uncheckGlassIfNotRequested(page, meta, simulationPayload);
+        // Quando há aprendizagem manual, preservar o clique do utilizador sem sincronização automática posterior.
+        if (!shouldPauseForGlassUncheck) {
+          await uncheckGlassIfNotRequested(page, meta, simulationPayload);
+        }
         if (shouldDragCoberturasSlider || shouldCalculateCoberturasAfterDrag || shouldPauseBeforeCoberturasCalculator || shouldPauseBeforeCoberturasReceiptDetails || shouldPauseAfterCoberturasSlider || shouldPauseBeforeAccordionScrape || shouldScrapeAccordionBeforeCalcular || shouldScrapeAccordionAfterSlider) {
           meta.steps.push('final-step-decision -> drag-coberturas-slider');
           await dragCoberturasSliderStep(page, meta);

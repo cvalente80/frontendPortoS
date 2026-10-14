@@ -33,3 +33,10 @@ artifacts/
 !/.env.example
 .env.playwright.local
 logs/
+
+# Playwright
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+/playwright/.auth/

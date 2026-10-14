@@ -104,6 +104,7 @@ export function getTransferFields(payload = {}) {
 export async function openTransferPage({ page, targetUrl, timeoutMs = 45000 }) {
   page.setDefaultTimeout(timeoutMs);
   await page.goto(targetUrl, { waitUntil: 'domcontentloaded' });
+  await page.pause(); 
 }
 
 export async function performLogin({ page, selectors = {}, login, artifactBaseDir }) {

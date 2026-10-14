@@ -18,6 +18,17 @@ module.exports = {
       env: {
         WATCHER_ENV: 'production',
         PW_HEADLESS: 'true',
+        PWDEBUG: '0',
+        PW_PAUSE_AFTER_ZURICH: 'false',
+        PW_PAUSE_ON_WEBMAIL: 'false',
+        PW_PAUSE_AFTER_WEBMAIL: 'false',
+        TRANSFER_PAUSE_FOR_GLASS_UNCHECK: 'false',
+        TRANSFER_PAUSE_BEFORE_PREMIUM: 'false',
+        TRANSFER_EMAIL_SEND_MANUAL: 'false',
+        TRANSFER_MANUAL_MATRICULA_LUPA_CAPTURE: 'false',
+        TRANSFER_MANUAL_MATRICULA_AFTER_NIF: 'false',
+        TRANSFER_MANUAL_SELECT_VEHICLE_FIRST: 'false',
+        TRANSFER_MANUAL_LEARN_VEHICLE_CLICK: 'false',
       },
       // Reiniciar automaticamente se o processo cair
       autorestart: true,
