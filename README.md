@@ -77,6 +77,28 @@ Nota: durante o registo via email/palavra‑passe, criamos/atualizamos o documen
 
 - Configure as regras do Firebase Storage/Firestore para que apenas admins possam escrever o campo `pdfUrl` e fazer upload para o caminho `simulations/**`.
 - Exemplo (pseudo): permitir `read` ao dono do documento, mas `write` apenas a `isAdmin == true`.
+
+## Notícias com imagem
+
+Os documentos da coleção `news` podem incluir os campos opcionais `imageUrl` e `imageAlt` para mostrar uma imagem no cartão da notícia:
+
+```json
+{
+  "title": "Título da notícia",
+  "summary": "Resumo da notícia",
+  "url": "https://exemplo.pt/noticia",
+  "imageUrl": "https://exemplo.pt/imagens/noticia.jpg",
+  "imageAlt": "Descrição da imagem",
+  "source": "Fonte",
+  "publishedAt": "2026-10-21T10:00:00.000Z",
+  "region": "ansiao"
+}
+```
+
+`imageUrl` é opcional: notícias existentes sem este campo continuam a ser apresentadas normalmente.
+
+Ao executar manualmente qualquer workflow `news-*.yml` em GitHub Actions, preencha `image_url` com a URL pública da imagem e, opcionalmente, `image_alt` com a descrição acessível. O workflow grava estes valores automaticamente no documento Firestore.
+
 ## Personalização
 Adicione ou edite componentes em `src/` para adaptar o site a outros clientes ou produtos.
 

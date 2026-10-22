@@ -11,6 +11,8 @@ export type NewsItem = {
   title: string;
   summary: string;
   url: string;
+  imageUrl?: string;
+  imageAlt?: string;
   source: string;
   publishedAt: string; // ISO string
   region: NewsRegion;
@@ -130,6 +132,17 @@ export default function Noticias() {
                 className="bg-white rounded-xl shadow border border-blue-100 p-5 flex flex-col justify-between"
               >
                 <div>
+                  {item.imageUrl && (
+                    <img
+                      src={item.imageUrl}
+                      alt={item.imageAlt || item.title}
+                      loading="lazy"
+                      className="-mx-5 -mt-5 mb-4 h-44 w-[calc(100%+2.5rem)] rounded-t-xl object-cover"
+                      onError={(event) => {
+                        event.currentTarget.style.display = "none";
+                      }}
+                    />
+                  )}
                   <div className="text-xs uppercase tracking-wide text-blue-500 mb-1">
                     {new Date(item.publishedAt).toLocaleDateString(lang === "en" ? "en-GB" : "pt-PT", {
                       day: "2-digit",

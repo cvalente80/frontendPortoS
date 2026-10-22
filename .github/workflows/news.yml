@@ -15,6 +15,12 @@ on:
       region:
         description: 'Region (ansiao|povoa|lisboa|porto|pombal|sintra|nacional)'
         required: false
+      image_url:
+        description: 'Image URL (optional)'
+        required: false
+      image_alt:
+        description: 'Image description (optional)'
+        required: false
 
 jobs:
   upsert:
@@ -38,5 +44,5 @@ jobs:
           OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
           FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
         run: |
-          node scripts/upsertNewsWithAi.mjs "${{ github.event.inputs.title }}" "${{ github.event.inputs.url }}" "${{ github.event.inputs.source }}" "${{ github.event.inputs.region }}"
+          node scripts/upsertNewsWithAi.mjs "${{ github.event.inputs.title }}" "${{ github.event.inputs.url }}" "${{ github.event.inputs.source }}" "${{ github.event.inputs.region }}" "${{ github.event.inputs.image_url }}" "${{ github.event.inputs.image_alt }}"
         working-directory: functions

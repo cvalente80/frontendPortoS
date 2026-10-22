@@ -58,14 +58,16 @@ async function fetchArticleText(url) {
 }
 
 async function main() {
-  const [,, title, url, source, regionArg] = process.argv;
+  const [,, title, url, source, regionArg, imageUrlArg, imageAltArg] = process.argv;
   if (!title || !url || !source) {
-    console.error('Usage: node upsertNewsWithAi.mjs "title" "url" "source" [region]');
+    console.error('Usage: node upsertNewsWithAi.mjs "title" "url" "source" [region] [imageUrl] [imageAlt]');
     process.exit(1);
   }
   const allowedRegions = new Set(['ansiao', 'povoa', 'lisboa', 'porto', 'pombal', 'sintra', 'vfx', 'nacional']);
   const regionRaw = String(regionArg || 'nacional').toLowerCase();
   const region = allowedRegions.has(regionRaw) ? regionRaw : 'nacional';
+  const imageUrl = String(imageUrlArg || '').trim();
+  const imageAlt = String(imageAltArg || '').trim();
 
   const openaiKey = env('OPENAI_API_KEY');
   const openaiModel = env('OPENAI_MODEL', 'gpt-4o-mini');
@@ -140,7 +142,7 @@ ${articleText ? `Conteúdo (HTML/truncado):\n${articleText}` : ''}`;
 
   const newsRef = db.collection('news').doc();
   const nowIso = new Date().toISOString();
-  await newsRef.set({
+  const newsData = {
     title,
     url,
     source,
@@ -148,9 +150,13 @@ ${articleText ? `Conteúdo (HTML/truncado):\n${articleText}` : ''}`;
     summary,
     tags,
     publishedAt: nowIso,
-  }, { merge: true });
+  };
+  if (imageUrl) newsData.imageUrl = imageUrl;
+  if (imageAlt) newsData.imageAlt = imageAlt;
 
-  console.log(JSON.stringify({ ok: true, id: newsRef.id, summary, tags }, null, 2));
+  await newsRef.set(newsData, { merge: true });
+
+  console.log(JSON.stringify({ ok: true, id: newsRef.id, summary, tags, imageUrl, imageAlt }, null, 2));
 }
 
 main().catch((err) => {
